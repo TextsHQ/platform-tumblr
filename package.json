@@ -1,5 +1,5 @@
 {
-  "name": "@textshq/platform-x",
+  "name": "@textshq/platform-tumblr",
   "version": "0.1.0",
   "main": "dist/index.js",
   "scripts": {
