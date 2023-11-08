@@ -1,5 +1,6 @@
 import { AccountInfo, ActivityType, Awaitable, CurrentUser, CustomEmojiMap, FetchInfo, LoginCreds, LoginResult, Message, MessageContent, MessageLink, MessageSendOptions, OnConnStateChangeCallback, OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap, SearchMessageOptions, texts, Thread, User } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
+import {randomUUID as uuid} from "crypto";
 
 export default class PlatformX implements PlatformAPI {
   private accountInfo: AccountInfo
@@ -12,13 +13,33 @@ export default class PlatformX implements PlatformAPI {
 
   dispose: () => Awaitable<void>
 
-  getCurrentUser: () => Awaitable<CurrentUser>
+  currentUser: User = null
 
-  login: (creds?: LoginCreds) => Promise<LoginResult>
+  getCurrentUser = () => this.currentUser
+
+  login = async (creds: LoginCreds): Promise<LoginResult> => {
+    const cookieJarJSON = 'cookieJarJSON' in creds && creds.cookieJarJSON
+    if (!cookieJarJSON) return { type: 'error', errorMessage: 'Cookies not found' }
+    await this.afterAuth()
+    return { type: 'success' }
+  }
+
+  private afterAuth = async () => {
+
+    const ml = await this.api.account_multi_list()
+    this.currentUser = await this.getUser({ username: ml.users[0].screen_name })
+    if (!this.currentUser) throw new Error('current user not present')
+    if (this.sendNotificationsThread) {
+      this.notifications = new Notifications(this, this.api)
+    }
+  }
+
 
   logout?: () => Awaitable<void>
 
-  serializeSession?: () => any
+  serializeSession = (): SerializedSession => ({
+    cookieJarJSON: this.api.cookieJar.toJSON(),
+  })
 
   subscribeToEvents: (onEvent: OnServerEventCallback) => Awaitable<void>
 
