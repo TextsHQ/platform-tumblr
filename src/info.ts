@@ -17,7 +17,11 @@ const info: PlatformInfo = {
   loginMode: 'browser',
   browserLogin: {
     url: 'https://tumblr.com/login',
-    authCookieName: 'psu',
+    authCookieName: 'pfu',
+    runJSOnLaunch: `
+      document.querySelector("header").parentElement.style.display = "none";
+      document.querySelector('[data-app-type="apple"]').parentElement.parentElement.style.display = "none";
+    `,
   },
 }
 
