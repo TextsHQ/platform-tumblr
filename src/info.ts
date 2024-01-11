@@ -5,8 +5,11 @@ const info: PlatformInfo = {
   version: '0.0.1',
   tags: ['Beta'],
   displayName: 'Tumblr',
-  icon: `<svg width="1em" height="1em" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M0 500C0 223.858 223.858 0 500 0C776.142 0 1000 223.858 1000 500C1000 776.142 776.142 1000 500 1000H62.5C27.9822 1000 0 972.017 0 937.5V500Z" fill="currentColor" />
+  icon: `<svg fill="none" height="128" viewBox="0 0 128 128" width="128" xmlns="http://www.w3.org/2000/svg">
+  <g clip-rule="evenodd" fill-rule="evenodd">
+    <rect x="0" y="0" width="128" height="128" fill="#001935" rx="30" ry="30"></rect>
+    <path d="m69.0573 78.3786c0 5.7711 2.9121 7.771 7.5453 7.771h6.5745v14.6684h-12.4476c-11.2159 0-19.5687-5.771-19.5687-19.5824v-22.1047h-10.1799v-11.9748c11.2077-2.9141 15.898-12.5624 16.4364-20.9292h11.64v18.9865h13.5815v13.9175h-13.5815z" fill="#fff"/>
+  </g>
 </svg>`,
   deletionMode: MessageDeletionMode.UNSUPPORTED,
   attributes: new Set([
