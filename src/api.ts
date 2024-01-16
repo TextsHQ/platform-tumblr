@@ -9,9 +9,9 @@ import {
 import type { Readable } from 'stream'
 
 import { CookieJar } from 'tough-cookie'
-import { TumblrClient } from './lib/tumblr-client'
-import { TumblrUserInfo } from './lib/types'
-import { UNTITLED_BLOG } from './lib/constants'
+import { TumblrClient } from './network-api'
+import type { TumblrUserInfo } from './types'
+import { UNTITLED_BLOG } from './constants'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly tumblrClient = new TumblrClient()
