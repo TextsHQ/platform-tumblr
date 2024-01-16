@@ -1,57 +1,123 @@
-import { AccountInfo, ActivityType, Awaitable, CurrentUser, CustomEmojiMap, FetchInfo, LoginCreds, LoginResult, Message, MessageContent, MessageLink, MessageSendOptions, OnConnStateChangeCallback, OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap, SearchMessageOptions, texts, Thread, User } from '@textshq/platform-sdk'
+import {
+  ActivityType, Awaitable, CurrentUser, CustomEmojiMap, FetchInfo, LoginCreds,
+  LoginResult, Message, MessageContent, MessageLink, MessageSendOptions, OnConnStateChangeCallback,
+  OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap,
+  SearchMessageOptions, Thread, User, OverridablePlatformInfo, OnLoginEventCallback, ThreadFolderName,
+  ThreadID, StickerPack, StickerPackID, Attachment, MessageID, UserID, PhoneNumber, AttachmentID,
+  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, texts,
+} from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
-import {randomUUID as uuid} from "crypto";
 
-export default class PlatformX implements PlatformAPI {
-  private accountInfo: AccountInfo
+import { CookieJar } from 'tough-cookie'
+import { TumblrClient } from './lib/tumblr-client'
+import { TumblrUserInfo } from './lib/types'
+import { UNTITLED_BLOG } from './lib/constants'
 
-  private loginEventCallback: (data: any) => void
+export default class TumblrPlatformAPI implements PlatformAPI {
+  readonly tumblrClient = new TumblrClient()
 
-  init = async (session?: any, accountInfo?: AccountInfo, prefs?: Record<string, any>) => {
-    this.accountInfo = accountInfo
+  currentUser: CurrentUser = null
+
+  /**
+   * Called after new PlatformAPI()
+   * @param session - return value of `serializeSession`, `undefined` if not logged in
+   */
+  init = async (session?: { cookies?: CookieJar.Serialized }) => {
+    const serializedCookieJar: CookieJar.Serialized = session?.cookies
+    if (!serializedCookieJar) {
+      return
+    }
+
+    await this.tumblrClient.setLoginState(serializedCookieJar)
   }
 
+  /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
   dispose: () => Awaitable<void>
 
-  currentUser: User = null
-
-  getCurrentUser = () => this.currentUser
-
-  login = async (creds: LoginCreds): Promise<LoginResult> => {
-    const cookieJarJSON = 'cookieJarJSON' in creds && creds.cookieJarJSON
-    if (!cookieJarJSON) return { type: 'error', errorMessage: 'Cookies not found' }
-    await this.afterAuth()
-    return { type: 'success' }
-  }
-
-  private afterAuth = async () => {
-
-    const ml = await this.api.account_multi_list()
-    this.currentUser = await this.getUser({ username: ml.users[0].screen_name })
-    if (!this.currentUser) throw new Error('current user not present')
-    if (this.sendNotificationsThread) {
-      this.notifications = new Notifications(this, this.api)
-    }
-  }
-
-
-  logout?: () => Awaitable<void>
-
-  serializeSession = (): SerializedSession => ({
-    cookieJarJSON: this.api.cookieJar.toJSON(),
+  static getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
+    reactions: {
+      supported: {},
+      canReactWithAllEmojis: false,
+      allowsMultipleReactionsToSingleMessage: false,
+    },
+    attachments: {
+      noSupportForVideo: true,
+      noSupportForAudio: true,
+      noSupportForFiles: true,
+    },
   })
 
   subscribeToEvents: (onEvent: OnServerEventCallback) => Awaitable<void>
 
-  onLoginEvent = (onEvent: (data: any) => void) => {
-    this.loginEventCallback = onEvent
+  onLoginEvent?: (onEvent: OnLoginEventCallback) => Awaitable<void>
+
+  onConnectionStateChange?: (
+    onEvent: OnConnStateChangeCallback
+  ) => Awaitable<void>
+
+  getCurrentUser = async (): Promise<CurrentUser> => {
+    if (this.currentUser) {
+      return this.currentUser
+    }
+
+    const response = await this.tumblrClient.getCurrentUser()
+    if (TumblrClient.isSuccessResponse<TumblrUserInfo>(response)) {
+      this.currentUser = TumblrPlatformAPI.formatUser(response.json)
+      return this.currentUser
+    }
+    texts.error('Tumblr.getCurrentUser failed', response)
+    return Promise.reject(response)
   }
 
-  onConnectionStateChange?: (onEvent: OnConnStateChangeCallback) => Awaitable<void>
+  private static formatUser = (user: TumblrUserInfo): CurrentUser => {
+    const primaryBlog = user.blogs.find(({ primary }) => primary)
+    const primaryBlogTitle = primaryBlog.title && primaryBlog.title !== UNTITLED_BLOG
+      ? primaryBlog.title
+      : user.name
+    const avatarUrl = primaryBlog.avatar[0]?.url
+    return {
+      ...user,
+      displayText: primaryBlogTitle,
+      id: user.userUuid,
+      username: user.name,
+      email: user.email,
+      fullName: user.name,
+      nickname: user.name,
+      imgURL: avatarUrl,
+      isVerified: user.isEmailVerified,
+      social: {
+        coverImgURL: avatarUrl,
+        website: primaryBlog.url,
+        followers: {
+          count: primaryBlog.followers,
+        },
+      },
+    }
+  }
 
-  takeoverConflict?: () => Awaitable<void>
+  login = async (creds?: LoginCreds): Promise<LoginResult> => {
+    const cookieJar: CookieJar.Serialized = creds?.cookieJarJSON
 
-  searchUsers: (typed: string) => Awaitable<User[]>
+    if (!TumblrClient.isLoggedIn(cookieJar)) {
+      return { type: 'error' }
+    }
+
+    await this.tumblrClient.setLoginState(cookieJar)
+
+    return {
+      type: 'success',
+    }
+  }
+
+  /**
+   * `logout` logs out the user from the platform's servers,
+   * session should no longer be valid. Called when user clicks logout.
+   * */
+  logout?: () => Awaitable<void>
+
+  serializeSession = () => ({ cookies: this.tumblrClient.cookieJar.toJSON() })
+
+  searchUsers?: (typed: string) => Awaitable<User[]>
 
   searchThreads?: (typed: string) => Awaitable<Thread[]>
 
@@ -61,69 +127,86 @@ export default class PlatformX implements PlatformAPI {
 
   getCustomEmojis?: () => Awaitable<CustomEmojiMap>
 
-  getThreads: (folderName: string, pagination?: PaginationArg) => Awaitable<Paginated<Thread>>
+  getThreads: (folderName: ThreadFolderName, pagination?: PaginationArg) => Awaitable<Paginated<Thread>>
 
-  getMessages: (threadID: string, pagination?: PaginationArg) => Awaitable<Paginated<Message>>
+  /** Messages should be sorted by timestamp asc → desc */
+  getMessages: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Message>>
 
-  getThreadParticipants?: (threadID: string, pagination?: PaginationArg) => Awaitable<Paginated<Participant>>
+  getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Participant>>
 
-  getThread?: (threadID: string) => Awaitable<Thread>
+  getStickerPacks?: (pagination?: PaginationArg) => Awaitable<Paginated<StickerPack>>
 
-  getMessage?: (messageID: string) => Awaitable<Message>
+  getStickers?: (stickerPackID: StickerPackID, pagination?: PaginationArg) => Awaitable<Paginated<Attachment>>
 
-  getUser?: (ids: { userID?: string } | { username?: string } | { phoneNumber?: string } | { email?: string }) => Awaitable<User>
+  getThread?: (threadID: ThreadID) => Awaitable<Thread | undefined>
 
-  createThread: (userIDs: string[], title?: string, messageText?: string) => Awaitable<boolean | Thread>
+  getMessage?: (threadID: ThreadID, messageID: MessageID) => Awaitable<Message | undefined>
 
-  updateThread?: (threadID: string, updates: Partial<Thread>) => Awaitable<void>
+  getUser?: (ids: | { userID: UserID } | { username: string } | { phoneNumber: PhoneNumber } | { email: string }) => Awaitable<User | undefined>
 
-  deleteThread?: (threadID: string) => Awaitable<void>
+  createThread?: (userIDs: UserID[], title?: string, messageText?: string) => Awaitable<boolean | Thread>
 
-  reportThread?: (type: 'spam', threadID: string, firstMessageID?: string) => Awaitable<boolean>
+  updateThread?: (threadID: ThreadID, updates: Partial<Thread>) => Awaitable<void>
 
-  sendMessage?: (threadID: string, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
+  deleteThread?: (threadID: ThreadID) => Awaitable<void>
 
-  editMessage?: (threadID: string, messageID: string, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
+  reportThread?: (type: 'spam', threadID: ThreadID, firstMessageID?: MessageID) => Awaitable<boolean>
 
-  forwardMessage?: (threadID: string, messageID: string, threadIDs?: string[], userIDs?: string[]) => Promise<void>
+  sendMessage?: (threadID: ThreadID, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
 
-  sendActivityIndicator: (type: ActivityType, threadID?: string) => Awaitable<void>
+  editMessage?: (threadID: ThreadID, messageID: MessageID, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
 
-  deleteMessage?: (threadID: string, messageID: string, forEveryone?: boolean) => Awaitable<void>
+  forwardMessage?: (threadID: ThreadID, messageID: MessageID, threadIDs?: ThreadID[], userIDs?: UserID[]) => Promise<void>
 
-  sendReadReceipt: (threadID: string, messageID: string, messageCursor?: string) => Awaitable<void>
+  sendActivityIndicator: (type: ActivityType, threadID?: ThreadID) => Awaitable<void>
 
-  addReaction?: (threadID: string, messageID: string, reactionKey: string) => Awaitable<void>
+  deleteMessage?: (threadID: ThreadID, messageID: MessageID, forEveryone?: boolean) => Awaitable<void>
 
-  removeReaction?: (threadID: string, messageID: string, reactionKey: string) => Awaitable<void>
+  sendReadReceipt: (threadID: ThreadID, messageID: MessageID, messageCursor?: string) => Awaitable<void>
 
-  getLinkPreview?: (link: string) => Awaitable<MessageLink>
+  addReaction?: (threadID: ThreadID, messageID: MessageID, reactionKey: string) => Awaitable<void>
 
-  addParticipant?: (threadID: string, participantID: string) => Awaitable<void>
+  removeReaction?: (threadID: ThreadID, messageID: MessageID, reactionKey: string) => Awaitable<void>
 
-  removeParticipant?: (threadID: string, participantID: string) => Awaitable<void>
+  getLinkPreview?: (link: string) => Awaitable<MessageLink | undefined>
 
-  changeParticipantRole?: (threadID: string, participantID: string, role: string) => Awaitable<void>
+  addParticipant?: (threadID: ThreadID, participantID: UserID) => Awaitable<void>
 
-  changeThreadImage?: (threadID: string, imageBuffer: Buffer, mimeType: string) => Awaitable<void>
+  removeParticipant?: (threadID: ThreadID, participantID: UserID) => Awaitable<void>
 
-  markAsUnread?: (threadID: string, messageID?: string) => Awaitable<void>
+  changeParticipantRole?: (threadID: ThreadID, participantID: UserID, role: 'admin' | 'regular') => Awaitable<void>
 
-  archiveThread?: (threadID: string, archived: boolean) => Awaitable<void>
+  changeThreadImage?: (threadID: ThreadID, imageBuffer: Buffer, mimeType: string) => Awaitable<void>
 
-  pinThread?: (threadID: string, pinned: boolean) => Awaitable<void>
+  markAsUnread?: (threadID: ThreadID, messageID?: MessageID) => Awaitable<void>
 
-  notifyAnyway?: (threadID: string) => Awaitable<void>
+  archiveThread?: (threadID: ThreadID, archived: boolean) => Awaitable<void>
 
-  onThreadSelected?: (threadID: string) => Awaitable<void>
+  pinThread?: (threadID: ThreadID, pinned: boolean) => Awaitable<void>
+
+  notifyAnyway?: (threadID: ThreadID) => Awaitable<void>
+
+  /** called by the client when an attachment (video/audio/image) is marked as played by user */
+  markAttachmentPlayed?: (attachmentID: AttachmentID, messageID?: MessageID) => Awaitable<void>
+
+  onThreadSelected?: (threadID: ThreadID) => Awaitable<void>
 
   loadDynamicMessage?: (message: Message) => Awaitable<Partial<Message>>
 
-  getAsset?: (_, ...args: string[]) => Awaitable<string | Buffer | FetchInfo | Readable>
+  registerForPushNotifications?: (type: keyof NotificationsInfo, token: string) => Awaitable<void>
 
-  getOriginalObject?: (objName: 'thread' | 'message', objectID: string) => Awaitable<string>
+  unregisterForPushNotifications?: (type: keyof NotificationsInfo, token: string) => Awaitable<void>
+
+  getAsset?: (fetchOptions?: GetAssetOptions, ...args: string[]) => Awaitable<FetchURL | FetchInfo | Buffer | Readable | Asset>
+
+  /** `getAssetInfo` must be implemented if getAsset supports fetchOptions.range */
+  getAssetInfo?: (fetchOptions?: GetAssetOptions, ...args: string[]) => Awaitable<AssetInfo>
+
+  /** `getOriginalObject` returns the JSON representation of the original thread or message */
+  getOriginalObject?: (objName: 'thread' | 'message', objectID: ThreadID | MessageID) => Awaitable<string>
 
   handleDeepLink?: (link: string) => void
 
-  onResumeFromSleep?: () => void
+  /** reconnect any websocket, mqtt or network connections since client thinks it's likely to have broken */
+  reconnectRealtime?: () => void
 }
