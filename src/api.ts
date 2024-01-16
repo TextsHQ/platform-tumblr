@@ -88,7 +88,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
       id: user.userUuid,
       username: user.name,
       email: user.email,
-      fullName: primaryBlogTitle,
+      fullName: user.name,
       nickname: user.name,
       imgURL: avatarUrl,
       isVerified: user.isEmailVerified,
