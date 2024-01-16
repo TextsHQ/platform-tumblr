@@ -1,10 +1,12 @@
-import { texts, Platform } from '@textshq/platform-sdk'
+import { Platform } from '@textshq/platform-sdk'
 
 export default {
   get info() {
-    return require("./info").default;
+    // eslint-disable-next-line global-require
+    return require('./info').default
   },
   get api() {
-    return require("./api").default;
+    // eslint-disable-next-line global-require
+    return require('./api').default
   },
-} as Platform;
+} as Platform

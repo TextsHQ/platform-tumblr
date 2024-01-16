@@ -1,4 +1,4 @@
-import { PlatformInfo, MessageDeletionMode, texts } from '@textshq/platform-sdk'
+import { PlatformInfo, MessageDeletionMode } from '@textshq/platform-sdk'
 
 const info: PlatformInfo = {
   name: 'Tumblr',
