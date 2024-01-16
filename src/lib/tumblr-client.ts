@@ -92,16 +92,13 @@ export class TumblrClient {
   > => {
     const response = await this.fetch<{ user: TumblrUserInfo }>(USER_INFO_URL)
 
-    if (
-      TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ user: TumblrUserInfo }>>(
-        response,
-      )
-    ) {
+    if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ user: TumblrUserInfo }>>(response)) {
       return {
         ...response,
         json: response.json.response.user,
       }
     }
+
     return response
   }
 }
