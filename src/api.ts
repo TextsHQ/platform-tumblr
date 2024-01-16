@@ -44,13 +44,6 @@ export default class TumblrPlatformAPI implements PlatformAPI {
       noSupportForVideo: true,
       noSupportForAudio: true,
       noSupportForFiles: true,
-      /** max sendable attachment size in bytes */
-      // maxSize?: {
-      //     image?: number;
-      //     video?: number;
-      //     audio?: number;
-      //     files?: number;
-      // },
     },
   })
 
