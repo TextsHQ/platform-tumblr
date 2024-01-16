@@ -128,155 +128,62 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   searchThreads?: (typed: string) => Awaitable<Thread[]>
 
-  searchMessages?: (
-    typed: string,
-    pagination?: PaginationArg,
-    options?: SearchMessageOptions
-  ) => Awaitable<Paginated<Message>>
+  searchMessages?: (typed: string, pagination?: PaginationArg, options?: SearchMessageOptions) => Awaitable<Paginated<Message>>
 
   getPresence?: () => Awaitable<PresenceMap>
 
   getCustomEmojis?: () => Awaitable<CustomEmojiMap>
 
-  getThreads: (
-    folderName: ThreadFolderName,
-    pagination?: PaginationArg
-  ) => Awaitable<Paginated<Thread>>
+  getThreads: (folderName: ThreadFolderName, pagination?: PaginationArg) => Awaitable<Paginated<Thread>>
 
   /** Messages should be sorted by timestamp asc → desc */
-  getMessages: (
-    threadID: ThreadID,
-    pagination?: PaginationArg
-  ) => Awaitable<Paginated<Message>>
+  getMessages: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Message>>
 
-  getThreadParticipants?: (
-    threadID: ThreadID,
-    pagination?: PaginationArg
-  ) => Awaitable<Paginated<Participant>>
+  getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Participant>>
 
-  getStickerPacks?: (
-    pagination?: PaginationArg
-  ) => Awaitable<Paginated<StickerPack>>
+  getStickerPacks?: (pagination?: PaginationArg) => Awaitable<Paginated<StickerPack>>
 
-  getStickers?: (
-    stickerPackID: StickerPackID,
-    pagination?: PaginationArg
-  ) => Awaitable<Paginated<Attachment>>
+  getStickers?: (stickerPackID: StickerPackID, pagination?: PaginationArg) => Awaitable<Paginated<Attachment>>
 
   getThread?: (threadID: ThreadID) => Awaitable<Thread | undefined>
 
-  getMessage?: (
-    threadID: ThreadID,
-    messageID: MessageID
-  ) => Awaitable<Message | undefined>
+  getMessage?: (threadID: ThreadID, messageID: MessageID) => Awaitable<Message | undefined>
 
-  getUser?: (
-    ids:
-    | {
-      userID: UserID
-    }
-    | {
-      username: string
-    }
-    | {
-      phoneNumber: PhoneNumber
-    }
-    | {
-      email: string
-    }
-  ) => Awaitable<User | undefined>
+  getUser?: (ids: | { userID: UserID } | { username: string } | { phoneNumber: PhoneNumber } | { email: string }) => Awaitable<User | undefined>
 
-  createThread?: (
-    userIDs: UserID[],
-    title?: string,
-    messageText?: string
-  ) => Awaitable<boolean | Thread>
+  createThread?: (userIDs: UserID[], title?: string, messageText?: string) => Awaitable<boolean | Thread>
 
-  updateThread?: (
-    threadID: ThreadID,
-    updates: Partial<Thread>
-  ) => Awaitable<void>
+  updateThread?: (threadID: ThreadID, updates: Partial<Thread>) => Awaitable<void>
 
   deleteThread?: (threadID: ThreadID) => Awaitable<void>
 
-  reportThread?: (
-    type: 'spam',
-    threadID: ThreadID,
-    firstMessageID?: MessageID
-  ) => Awaitable<boolean>
+  reportThread?: (type: 'spam', threadID: ThreadID, firstMessageID?: MessageID) => Awaitable<boolean>
 
-  sendMessage?: (
-    threadID: ThreadID,
-    content: MessageContent,
-    options?: MessageSendOptions
-  ) => Promise<boolean | Message[]>
+  sendMessage?: (threadID: ThreadID, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
 
-  editMessage?: (
-    threadID: ThreadID,
-    messageID: MessageID,
-    content: MessageContent,
-    options?: MessageSendOptions
-  ) => Promise<boolean | Message[]>
+  editMessage?: (threadID: ThreadID, messageID: MessageID, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
 
-  forwardMessage?: (
-    threadID: ThreadID,
-    messageID: MessageID,
-    threadIDs?: ThreadID[],
-    userIDs?: UserID[]
-  ) => Promise<void>
+  forwardMessage?: (threadID: ThreadID, messageID: MessageID, threadIDs?: ThreadID[], userIDs?: UserID[]) => Promise<void>
 
-  sendActivityIndicator: (
-    type: ActivityType,
-    threadID?: ThreadID
-  ) => Awaitable<void>
+  sendActivityIndicator: (type: ActivityType, threadID?: ThreadID) => Awaitable<void>
 
-  deleteMessage?: (
-    threadID: ThreadID,
-    messageID: MessageID,
-    forEveryone?: boolean
-  ) => Awaitable<void>
+  deleteMessage?: (threadID: ThreadID, messageID: MessageID, forEveryone?: boolean) => Awaitable<void>
 
-  sendReadReceipt: (
-    threadID: ThreadID,
-    messageID: MessageID,
-    messageCursor?: string
-  ) => Awaitable<void>
+  sendReadReceipt: (threadID: ThreadID, messageID: MessageID, messageCursor?: string) => Awaitable<void>
 
-  addReaction?: (
-    threadID: ThreadID,
-    messageID: MessageID,
-    reactionKey: string
-  ) => Awaitable<void>
+  addReaction?: (threadID: ThreadID, messageID: MessageID, reactionKey: string) => Awaitable<void>
 
-  removeReaction?: (
-    threadID: ThreadID,
-    messageID: MessageID,
-    reactionKey: string
-  ) => Awaitable<void>
+  removeReaction?: (threadID: ThreadID, messageID: MessageID, reactionKey: string) => Awaitable<void>
 
   getLinkPreview?: (link: string) => Awaitable<MessageLink | undefined>
 
-  addParticipant?: (
-    threadID: ThreadID,
-    participantID: UserID
-  ) => Awaitable<void>
+  addParticipant?: (threadID: ThreadID, participantID: UserID) => Awaitable<void>
 
-  removeParticipant?: (
-    threadID: ThreadID,
-    participantID: UserID
-  ) => Awaitable<void>
+  removeParticipant?: (threadID: ThreadID, participantID: UserID) => Awaitable<void>
 
-  changeParticipantRole?: (
-    threadID: ThreadID,
-    participantID: UserID,
-    role: 'admin' | 'regular'
-  ) => Awaitable<void>
+  changeParticipantRole?: (threadID: ThreadID, participantID: UserID, role: 'admin' | 'regular') => Awaitable<void>
 
-  changeThreadImage?: (
-    threadID: ThreadID,
-    imageBuffer: Buffer,
-    mimeType: string
-  ) => Awaitable<void>
+  changeThreadImage?: (threadID: ThreadID, imageBuffer: Buffer, mimeType: string) => Awaitable<void>
 
   markAsUnread?: (threadID: ThreadID, messageID?: MessageID) => Awaitable<void>
 
@@ -287,41 +194,23 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   notifyAnyway?: (threadID: ThreadID) => Awaitable<void>
 
   /** called by the client when an attachment (video/audio/image) is marked as played by user */
-  markAttachmentPlayed?: (
-    attachmentID: AttachmentID,
-    messageID?: MessageID
-  ) => Awaitable<void>
+  markAttachmentPlayed?: (attachmentID: AttachmentID, messageID?: MessageID) => Awaitable<void>
 
   onThreadSelected?: (threadID: ThreadID) => Awaitable<void>
 
   loadDynamicMessage?: (message: Message) => Awaitable<Partial<Message>>
 
-  registerForPushNotifications?: (
-    type: keyof NotificationsInfo,
-    token: string
-  ) => Awaitable<void>
+  registerForPushNotifications?: (type: keyof NotificationsInfo, token: string) => Awaitable<void>
 
-  unregisterForPushNotifications?: (
-    type: keyof NotificationsInfo,
-    token: string
-  ) => Awaitable<void>
+  unregisterForPushNotifications?: (type: keyof NotificationsInfo, token: string) => Awaitable<void>
 
-  getAsset?: (
-    fetchOptions?: GetAssetOptions,
-    ...args: string[]
-  ) => Awaitable<FetchURL | FetchInfo | Buffer | Readable | Asset>
+  getAsset?: (fetchOptions?: GetAssetOptions, ...args: string[]) => Awaitable<FetchURL | FetchInfo | Buffer | Readable | Asset>
 
   /** `getAssetInfo` must be implemented if getAsset supports fetchOptions.range */
-  getAssetInfo?: (
-    fetchOptions?: GetAssetOptions,
-    ...args: string[]
-  ) => Awaitable<AssetInfo>
+  getAssetInfo?: (fetchOptions?: GetAssetOptions, ...args: string[]) => Awaitable<AssetInfo>
 
   /** `getOriginalObject` returns the JSON representation of the original thread or message */
-  getOriginalObject?: (
-    objName: 'thread' | 'message',
-    objectID: ThreadID | MessageID
-  ) => Awaitable<string>
+  getOriginalObject?: (objName: 'thread' | 'message', objectID: ThreadID | MessageID) => Awaitable<string>
 
   handleDeepLink?: (link: string) => void
 
