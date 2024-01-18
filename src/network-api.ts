@@ -87,10 +87,8 @@ export class TumblrClient {
   /**
    * Fetches the current user info.
    */
-  getCurrentUser = async (): Promise<
-  TumblrFetchResponse<TumblrUserInfo | AnyJSON>
-  > => {
-    const response = await this.fetch<{ user: TumblrUserInfo }>(USER_INFO_URL)
+  getCurrentUser = async () => {
+    const response = await this.fetch(USER_INFO_URL)
 
     if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ user: TumblrUserInfo }>>(response)) {
       return {
@@ -99,6 +97,6 @@ export class TumblrClient {
       }
     }
 
-    return response
+    return Promise.reject(response)
   }
 }

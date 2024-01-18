@@ -4,13 +4,12 @@ import {
   OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap,
   SearchMessageOptions, Thread, User, OverridablePlatformInfo, OnLoginEventCallback, ThreadFolderName,
   ThreadID, StickerPack, StickerPackID, Attachment, MessageID, UserID, PhoneNumber, AttachmentID,
-  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, texts,
+  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
 
 import { CookieJar } from 'tough-cookie'
 import { TumblrClient } from './network-api'
-import type { TumblrUserInfo } from './types'
 import { mapUserInfo } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
@@ -61,12 +60,8 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     }
 
     const response = await this.tumblrClient.getCurrentUser()
-    if (TumblrClient.isSuccessResponse<TumblrUserInfo>(response)) {
-      this.currentUser = mapUserInfo(response.json)
-      return this.currentUser
-    }
-    texts.error('Tumblr.getCurrentUser failed', response)
-    return Promise.reject(response)
+    this.currentUser = mapUserInfo(response.json)
+    return this.currentUser
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
