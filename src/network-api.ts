@@ -4,10 +4,8 @@ import {
 } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 import {
-  AUTH_COOKIE,
-  LOGGED_IN_COOKIE,
+  API_URL,
   REQUEST_HEADERS,
-  USER_INFO_URL,
 } from './constants'
 import {
   AnyJSON,
@@ -24,25 +22,14 @@ export class TumblrClient {
   /**
    * Remember the auth cookies
    */
-  setLoginState = async (cookieJarJSON: CookieJar.Serialized) => {
-    this.cookieJar = await CookieJar.deserialize(cookieJarJSON)
+  authenticate = async (oauthCode: string) => {
+    console.log('tumblr.network.authenticate.oauthCode', oauthCode)
   }
 
   /**
    * Checks if the user has properly logged in.
    */
-  static isLoggedIn = (cookieJar: CookieJar.Serialized) => {
-    const sidCookie = cookieJar.cookies.find(({ key }) => key === AUTH_COOKIE)
-    if (!sidCookie?.value) {
-      return false
-    }
-
-    const loggedInCookie = cookieJar.cookies.find(
-      ({ key }) => key === LOGGED_IN_COOKIE,
-    )
-    const loggedInValue = parseInt(loggedInCookie.value || '0', 10)
-    return !Number.isNaN(loggedInValue) && loggedInValue > 0
-  }
+  static isLoggedIn = () => false
 
   /**
    * Tumblr API tailored fetch.
@@ -90,7 +77,7 @@ export class TumblrClient {
   getCurrentUser = async (): Promise<
   TumblrFetchResponse<TumblrUserInfo | AnyJSON>
   > => {
-    const response = await this.fetch<{ user: TumblrUserInfo }>(USER_INFO_URL)
+    const response = await this.fetch<{ user: TumblrUserInfo }>(`${API_URL}/user/info`)
 
     if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ user: TumblrUserInfo }>>(response)) {
       return {

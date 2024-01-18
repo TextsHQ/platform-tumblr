@@ -1,29 +1,26 @@
 import { texts } from '@textshq/platform-sdk'
-/**
- * The cookie that tells us the auth cookies were set.
- */
-export const AUTH_COOKIE = 'sid'
-
-/**
- * Extra cookie that is set by tumblr that confirms the login was successful.
- */
-export const LOGGED_IN_COOKIE = 'logged_in'
 
 /**
  * Base api url.
  */
-export const API_URL = 'https://www.tumblr.com/api/v2'
+export const API_URL = 'https://api.tumblr.com/v2'
 
 /**
- * User info url.
+ * Tumblr api key for Texts.com
  */
-export const USER_INFO_URL = `${API_URL}/user/info`
+export const API_KEY = 'FFNa7UzNzJcAH7fB5ukHph9PxO2iF5QfNTw8YyosPwOP9Cxwmw'
 
 /**
- * The Tumblr API token. It is included in each API request as a `Authorization: Bearer {API_TOKEN}` header.
- * See: https://github.tumblr.net/Tumblr/redpop/blob/93a1f1b26c8808a85eff02dbfaf7a632032c5af4/src/server/middleware/configure-api-fetch.ts#L17
+ * OAuth state parameter. Used to identify unique authorization requests.
+ * The value is arbitrary makes no difference for desktop app, because not
+ * processed by the texts.com server.
  */
-export const API_TOKEN = 'aIcXSOoTtqrzR8L8YEIOmBeW94c3FmbSNSWAUbxsny9KKx5VFh'
+export const OAUTH_STATE = 'texts.app.tumblr.oauth.state'
+
+/**
+ * The regexpt string that matches the url that tumblr.com redirects to once the user grants texts.com required persmissions.
+ */
+export const OAUTH_REDIRECT_REGEX_STR = `https:\\/\\/texts.com\\/redirect\\/tumblr\\?code=([a-z0-9]+)&state=${OAUTH_STATE}#_=_`
 
 /**
  * The headers that we include in each API request.
@@ -32,7 +29,6 @@ export const REQUEST_HEADERS = {
   Accept: 'application/json;format=camelcase',
   'Accept-Encoding': 'gzip, deflate, br',
   'Content-Type': 'application/json',
-  Authorization: `Bearer ${API_TOKEN}`,
   'User-Agent': texts.constants.USER_AGENT,
 }
 

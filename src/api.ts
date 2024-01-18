@@ -11,10 +11,10 @@ import type { Readable } from 'stream'
 import { CookieJar } from 'tough-cookie'
 import { TumblrClient } from './network-api'
 import type { TumblrUserInfo } from './types'
-import { UNTITLED_BLOG } from './constants'
+import { OAUTH_REDIRECT_REGEX_STR, UNTITLED_BLOG } from './constants'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
-  readonly tumblrClient = new TumblrClient()
+  readonly network = new TumblrClient()
 
   currentUser: CurrentUser = null
 
@@ -28,7 +28,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
       return
     }
 
-    await this.tumblrClient.setLoginState(serializedCookieJar)
+    await this.network.authenticate('authCode')
   }
 
   /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
@@ -60,7 +60,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
       return this.currentUser
     }
 
-    const response = await this.tumblrClient.getCurrentUser()
+    const response = await this.network.getCurrentUser()
     if (TumblrClient.isSuccessResponse<TumblrUserInfo>(response)) {
       this.currentUser = TumblrPlatformAPI.formatUser(response.json)
       return this.currentUser
@@ -96,17 +96,25 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
-    const cookieJar: CookieJar.Serialized = creds?.cookieJarJSON
-
-    if (!TumblrClient.isLoggedIn(cookieJar)) {
-      return { type: 'error' }
+    const { lastURL } = creds
+    const loginError: LoginResult = {
+      type: 'error',
     }
 
-    await this.tumblrClient.setLoginState(cookieJar)
-
-    return {
-      type: 'success',
+    if (!lastURL) {
+      return loginError
     }
+
+    const regexp = new RegExp(OAUTH_REDIRECT_REGEX_STR, 'gi')
+    const oauthCode: string = [...lastURL.matchAll(regexp)][0][1]
+    const loggedIn = this.network.authenticate(oauthCode)
+    if (loggedIn) {
+      return {
+        type: 'error',
+      }
+    }
+
+    return loginError
   }
 
   /**
@@ -115,7 +123,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
    * */
   logout?: () => Awaitable<void>
 
-  serializeSession = () => ({ cookies: this.tumblrClient.cookieJar.toJSON() })
+  serializeSession = () => ({ cookies: this.network.cookieJar.toJSON() })
 
   searchUsers?: (typed: string) => Awaitable<User[]>
 
