@@ -11,7 +11,7 @@ import type { Readable } from 'stream'
 import { CookieJar } from 'tough-cookie'
 import { TumblrClient } from './network-api'
 import type { TumblrUserInfo } from './types'
-import { UNTITLED_BLOG } from './constants'
+import { mapUserInfo } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly tumblrClient = new TumblrClient()
@@ -62,37 +62,11 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
     const response = await this.tumblrClient.getCurrentUser()
     if (TumblrClient.isSuccessResponse<TumblrUserInfo>(response)) {
-      this.currentUser = TumblrPlatformAPI.formatUser(response.json)
+      this.currentUser = mapUserInfo(response.json)
       return this.currentUser
     }
     texts.error('Tumblr.getCurrentUser failed', response)
     return Promise.reject(response)
-  }
-
-  private static formatUser = (user: TumblrUserInfo): CurrentUser => {
-    const primaryBlog = user.blogs.find(({ primary }) => primary)
-    const primaryBlogTitle = primaryBlog.title && primaryBlog.title !== UNTITLED_BLOG
-      ? primaryBlog.title
-      : user.name
-    const avatarUrl = primaryBlog.avatar[0]?.url
-    return {
-      ...user,
-      displayText: primaryBlogTitle,
-      id: user.userUuid,
-      username: user.name,
-      email: user.email,
-      fullName: user.name,
-      nickname: user.name,
-      imgURL: avatarUrl,
-      isVerified: user.isEmailVerified,
-      social: {
-        coverImgURL: avatarUrl,
-        website: primaryBlog.url,
-        followers: {
-          count: primaryBlog.followers,
-        },
-      },
-    }
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
