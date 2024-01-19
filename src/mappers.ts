@@ -4,7 +4,7 @@ import { UNTITLED_BLOG } from './constants'
 
 const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => {
   const social: UserSocialAttributes = {
-    coverImgURL: blog.avatar[0]?.url,
+    coverImgURL: blog.theme?.headerImage,
     bio: {
       text: blog.description,
     },

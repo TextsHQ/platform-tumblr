@@ -33,6 +33,11 @@ export interface Blog {
   followers: number
   shareFollowing: boolean
   description?: string
+  theme?: BlogTheme
+}
+
+interface BlogTheme {
+  headerImage: string
 }
 
 interface Avatar {
