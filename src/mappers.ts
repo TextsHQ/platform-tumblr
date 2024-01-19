@@ -164,6 +164,5 @@ export const mapPaginatedThreads = ({
 }): Paginated<Thread> => ({
   items: conversations.map(conversation => mapThread(conversation, currentUser)),
   hasMore: !!links?.next?.href || !!links?.prev?.href,
-  oldestCursor: links?.next?.href,
-  newestCursor: links?.prev?.href,
+  oldestCursor: links?.next?.href || links?.prev?.href,
 })
