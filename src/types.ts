@@ -31,6 +31,7 @@ export interface Blog {
   uuid: string
   url: string
   followers: number
+  shareFollowing: boolean
   description?: string
 }
 

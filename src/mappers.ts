@@ -2,16 +2,23 @@ import { CurrentUser, Message, Paginated, Participant, Thread, UserSocialAttribu
 import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, isTextBlock, Block, Blog, ApiLinks } from './types'
 import { UNTITLED_BLOG } from './constants'
 
-const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => ({
-  coverImgURL: blog.avatar[0]?.url,
-  bio: {
-    text: blog.description,
-  },
-  website: blog.url,
-  followers: {
-    count: blog.followers,
-  },
-})
+const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => {
+  const social: UserSocialAttributes = {
+    coverImgURL: blog.avatar[0]?.url,
+    bio: {
+      text: blog.description,
+    },
+    website: blog.url,
+  }
+
+  if (blog.shareFollowing) {
+    social.followers = {
+      count: blog.followers,
+    }
+  }
+
+  return social
+}
 
 export const mapCurrentUser = (user: TumblrUserInfo): CurrentUser => {
   const primaryBlog = user.blogs.find(({ primary }) => primary)
