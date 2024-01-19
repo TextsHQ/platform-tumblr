@@ -1,20 +1,28 @@
 import {
   FetchOptions,
+  PaginationArg,
   texts,
 } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 import {
+  API_URLS,
   AUTH_COOKIE,
   LOGGED_IN_COOKIE,
   REQUEST_HEADERS,
-  USER_INFO_URL,
 } from './constants'
 import {
   AnyJSON,
   TumblrUserInfo,
   TumblrFetchResponse,
   TumblrHttpResponseBody,
+  Conversation,
+  ApiLinks,
 } from './types'
+
+/**
+ * Strips out the api version path, because we use /v2/ by default.
+ */
+const stripApiVersion = (path: string): string => path.replace(/^\/v2/, '')
 
 export class TumblrClient {
   cookieJar: CookieJar
@@ -88,12 +96,33 @@ export class TumblrClient {
    * Fetches the current user info.
    */
   getCurrentUser = async () => {
-    const response = await this.fetch(USER_INFO_URL)
+    const response = await this.fetch(API_URLS.USER_INFO)
 
     if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ user: TumblrUserInfo }>>(response)) {
       return {
         ...response,
-        json: response.json.response.user,
+        json: response.json.response,
+      }
+    }
+
+    return Promise.reject(response)
+  }
+
+  /**
+   * Fetches the conversations.
+   */
+  getConversations = async (pagination?: PaginationArg) => {
+    let url = API_URLS.CONVERSATIONS
+    if (pagination?.cursor) {
+      url = `${API_URLS.BASE}${stripApiVersion(pagination.cursor)}`
+    }
+
+    const response = await this.fetch(url)
+
+    if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ conversations: Conversation[], links?: ApiLinks }>>(response)) {
+      return {
+        ...response,
+        json: response.json.response,
       }
     }
 

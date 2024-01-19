@@ -10,12 +10,13 @@ import type { Readable } from 'stream'
 
 import { CookieJar } from 'tough-cookie'
 import { TumblrClient } from './network-api'
-import { mapUserInfo } from './mappers'
+import { mapCurrentUser, mapPaginatedThreads } from './mappers'
+import { TumblrUserInfo } from './types'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly tumblrClient = new TumblrClient()
 
-  currentUser: CurrentUser = null
+  currentUser: TumblrUserInfo = null
 
   /**
    * Called after new PlatformAPI()
@@ -31,7 +32,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
-  dispose: () => Awaitable<void>
+  dispose = async () => {}
 
   static getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
     reactions: {
@@ -56,12 +57,12 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getCurrentUser = async (): Promise<CurrentUser> => {
     if (this.currentUser) {
-      return this.currentUser
+      return mapCurrentUser(this.currentUser)
     }
 
     const response = await this.tumblrClient.getCurrentUser()
-    this.currentUser = mapUserInfo(response.json)
-    return this.currentUser
+    this.currentUser = response.json.user
+    return mapCurrentUser(this.currentUser)
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
@@ -96,7 +97,11 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getCustomEmojis?: () => Awaitable<CustomEmojiMap>
 
-  getThreads: (folderName: ThreadFolderName, pagination?: PaginationArg) => Awaitable<Paginated<Thread>>
+  getThreads = async (folderName: ThreadFolderName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
+    const response = await this.tumblrClient.getConversations(pagination)
+    const { conversations, links } = response.json
+    return mapPaginatedThreads({ conversations, links, currentUser: this.currentUser })
+  }
 
   /** Messages should be sorted by timestamp asc → desc */
   getMessages: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Message>>

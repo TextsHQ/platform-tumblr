@@ -10,16 +10,6 @@ export const AUTH_COOKIE = 'sid'
 export const LOGGED_IN_COOKIE = 'logged_in'
 
 /**
- * Base api url.
- */
-export const API_URL = 'https://www.tumblr.com/api/v2'
-
-/**
- * User info url.
- */
-export const USER_INFO_URL = `${API_URL}/user/info`
-
-/**
  * The Tumblr API token. It is included in each API request as a `Authorization: Bearer {API_TOKEN}` header.
  * See: https://github.tumblr.net/Tumblr/redpop/blob/93a1f1b26c8808a85eff02dbfaf7a632032c5af4/src/server/middleware/configure-api-fetch.ts#L17
  */
@@ -40,3 +30,21 @@ export const REQUEST_HEADERS = {
  * The default, untitled blog name.
  */
 export const UNTITLED_BLOG = 'Untitled'
+
+/**
+ * Base api url.
+ */
+const API_URL = 'https://www.tumblr.com/api/v2'
+
+export const API_URLS = {
+  BASE: API_URL,
+  /**
+   * User info url.
+   */
+  USER_INFO: `${API_URL}/user/info`,
+
+  /**
+   * Conversations url.
+   */
+  CONVERSATIONS: `${API_URL}/conversations`,
+}
