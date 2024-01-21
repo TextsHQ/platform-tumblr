@@ -58,54 +58,30 @@ export class TumblrClient {
   private fetch = async <T = AnyJSON>(
     url: string,
     opts: FetchOptions = {},
-  ): Promise<TumblrFetchResponse<TumblrHttpResponseBody<T> | AnyJSON>> => {
-    try {
-      const response = await this.httpClient.requestAsString(url, {
-        ...opts,
-        headers: {
-          ...REQUEST_HEADERS,
-          ...(opts.headers || {}),
-        },
-        cookieJar: this.cookieJar,
-      })
-      return {
-        ...response,
-        json: JSON.parse(response.body),
-      }
-    } catch (error) {
-      texts.error('Tumblr Fetch Error', error)
-      return {
-        statusCode: 400,
-        body: `${error}`,
-        headers: {},
-        json: {},
-        error,
-      }
+  ): Promise<TumblrFetchResponse<TumblrHttpResponseBody<T>>> => {
+    const response = await this.httpClient.requestAsString(url, {
+      ...opts,
+      headers: {
+        ...REQUEST_HEADERS,
+        ...(opts.headers || {}),
+      },
+      cookieJar: this.cookieJar,
+    })
+    return {
+      ...response,
+      json: JSON.parse(response.body),
     }
   }
-
-  /**
-   * Tells if the api response is a success or fail/error.
-   */
-  static isSuccessResponse = <SuccessType = AnyJSON, ErrorType = AnyJSON>(
-    response: TumblrFetchResponse<SuccessType> | TumblrFetchResponse<ErrorType>,
-  ): response is TumblrFetchResponse<SuccessType> =>
-    response.statusCode >= 200 && response.statusCode < 300
 
   /**
    * Fetches the current user info.
    */
   getCurrentUser = async () => {
-    const response = await this.fetch(API_URLS.USER_INFO)
-
-    if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ user: TumblrUserInfo }>>(response)) {
-      return {
-        ...response,
-        json: response.json.response,
-      }
+    const response = await this.fetch<{ user: TumblrUserInfo }>(API_URLS.USER_INFO)
+    return {
+      ...response,
+      json: response.json.response,
     }
-
-    return Promise.reject(response)
   }
 
   /**
@@ -117,15 +93,10 @@ export class TumblrClient {
       url = `${API_URLS.BASE}${stripApiVersion(pagination.cursor)}`
     }
 
-    const response = await this.fetch(url)
-
-    if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ conversations: Conversation[], links?: ApiLinks }>>(response)) {
-      return {
-        ...response,
-        json: response.json.response,
-      }
+    const response = await this.fetch<{ conversations: Conversation[], links?: ApiLinks }>(url)
+    return {
+      ...response,
+      json: response.json.response,
     }
-
-    return Promise.reject(response)
   }
 }
