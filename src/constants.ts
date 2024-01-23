@@ -12,15 +12,9 @@ export const API_KEY = 'FFNa7UzNzJcAH7fB5ukHph9PxO2iF5QfNTw8YyosPwOP9Cxwmw'
 
 /**
  * OAuth state parameter. Used to identify unique authorization requests.
- * The value is arbitrary makes no difference for desktop app, because not
- * processed by the texts.com server.
+ * The value is arbitrary and makes no difference for desktop app.
  */
 export const OAUTH_STATE = 'texts.app.tumblr.oauth.state'
-
-/**
- * The regexpt string that matches the url that tumblr.com redirects to once the user grants texts.com required persmissions.
- */
-export const OAUTH_REDIRECT_REGEX_STR = `https:\\/\\/texts.com\\/redirect\\/tumblr\\?code=([a-z0-9]+)&state=${OAUTH_STATE}#_=_`
 
 /**
  * The headers that we include in each API request.
