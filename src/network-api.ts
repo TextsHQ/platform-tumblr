@@ -1,20 +1,28 @@
 import {
   FetchOptions,
+  PaginationArg,
   texts,
 } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 import {
+  API_URLS,
   AUTH_COOKIE,
   LOGGED_IN_COOKIE,
   REQUEST_HEADERS,
-  USER_INFO_URL,
 } from './constants'
 import {
   AnyJSON,
   TumblrUserInfo,
   TumblrFetchResponse,
   TumblrHttpResponseBody,
+  Conversation,
+  ApiLinks,
 } from './types'
+
+/**
+ * Strips out the api version path, because we use /v2/ by default.
+ */
+const stripApiVersion = (path: string): string => path.replace(/^\/v2/, '')
 
 export class TumblrClient {
   cookieJar: CookieJar
@@ -50,55 +58,45 @@ export class TumblrClient {
   private fetch = async <T = AnyJSON>(
     url: string,
     opts: FetchOptions = {},
-  ): Promise<TumblrFetchResponse<TumblrHttpResponseBody<T> | AnyJSON>> => {
-    try {
-      const response = await this.httpClient.requestAsString(url, {
-        ...opts,
-        headers: {
-          ...REQUEST_HEADERS,
-          ...(opts.headers || {}),
-        },
-        cookieJar: this.cookieJar,
-      })
-      return {
-        ...response,
-        json: JSON.parse(response.body),
-      }
-    } catch (error) {
-      texts.error('Tumblr Fetch Error', error)
-      return {
-        statusCode: 400,
-        body: `${error}`,
-        headers: {},
-        json: {},
-        error,
-      }
+  ): Promise<TumblrFetchResponse<TumblrHttpResponseBody<T>>> => {
+    const response = await this.httpClient.requestAsString(url, {
+      ...opts,
+      headers: {
+        ...REQUEST_HEADERS,
+        ...(opts.headers || {}),
+      },
+      cookieJar: this.cookieJar,
+    })
+    return {
+      ...response,
+      json: JSON.parse(response.body),
     }
   }
 
   /**
-   * Tells if the api response is a success or fail/error.
-   */
-  static isSuccessResponse = <SuccessType = AnyJSON, ErrorType = AnyJSON>(
-    response: TumblrFetchResponse<SuccessType> | TumblrFetchResponse<ErrorType>,
-  ): response is TumblrFetchResponse<SuccessType> =>
-    response.statusCode >= 200 && response.statusCode < 300
-
-  /**
    * Fetches the current user info.
    */
-  getCurrentUser = async (): Promise<
-  TumblrFetchResponse<TumblrUserInfo | AnyJSON>
-  > => {
-    const response = await this.fetch<{ user: TumblrUserInfo }>(USER_INFO_URL)
+  getCurrentUser = async () => {
+    const response = await this.fetch<{ user: TumblrUserInfo }>(API_URLS.USER_INFO)
+    return {
+      ...response,
+      json: response.json.response,
+    }
+  }
 
-    if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ user: TumblrUserInfo }>>(response)) {
-      return {
-        ...response,
-        json: response.json.response.user,
-      }
+  /**
+   * Fetches the conversations.
+   */
+  getConversations = async (pagination?: PaginationArg) => {
+    let url = API_URLS.CONVERSATIONS
+    if (pagination?.cursor) {
+      url = `${API_URLS.BASE}${stripApiVersion(pagination.cursor)}`
     }
 
-    return response
+    const response = await this.fetch<{ conversations: Conversation[], links?: ApiLinks }>(url)
+    return {
+      ...response,
+      json: response.json.response,
+    }
   }
 }
