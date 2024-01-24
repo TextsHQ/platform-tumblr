@@ -3,7 +3,7 @@ import { texts } from '@textshq/platform-sdk'
 /**
  * Tumblr api key for Texts.com
  */
-export const API_KEY = 'FFNa7UzNzJcAH7fB5ukHph9PxO2iF5QfNTw8YyosPwOP9Cxwmw'
+export const API_KEY = 'jv6c8LgTQ9Ldf9YqF3KUSgX2MbdKt3lfjQSV37NJua1DUHeXKX'
 
 /**
  * OAuth state parameter. Used to identify unique authorization requests.
