@@ -8,10 +8,9 @@ import {
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
 
-import { CookieJar } from 'tough-cookie'
 import { TumblrClient } from './network-api'
-import type { TumblrUserInfo } from './types'
-import { OAUTH_REDIRECT_REGEX_STR, UNTITLED_BLOG } from './constants'
+import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration, TumblrUserInfo } from './types'
+import { UNTITLED_BLOG } from './constants'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
@@ -22,17 +21,14 @@ export default class TumblrPlatformAPI implements PlatformAPI {
    * Called after new PlatformAPI()
    * @param session - return value of `serializeSession`, `undefined` if not logged in
    */
-  init = async (session?: { cookies?: CookieJar.Serialized }) => {
-    const serializedCookieJar: CookieJar.Serialized = session?.cookies
-    if (!serializedCookieJar) {
-      return
+  init = (session: { creds?: AuthCredentialsWithExpiration }) => {
+    if (session?.creds) {
+      this.network.setAuthCreds(session.creds)
     }
-
-    await this.network.authenticate('authCode')
   }
 
   /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
-  dispose: () => Awaitable<void>
+  dispose = async () => {}
 
   static getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
     reactions: {
@@ -96,25 +92,29 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
-    const { lastURL } = creds
+    const { jsCodeResult } = creds
     const loginError: LoginResult = {
       type: 'error',
     }
 
-    if (!lastURL) {
+    if (!jsCodeResult) {
       return loginError
     }
 
-    const regexp = new RegExp(OAUTH_REDIRECT_REGEX_STR, 'gi')
-    const oauthCode: string = [...lastURL.matchAll(regexp)][0][1]
-    const loggedIn = this.network.authenticate(oauthCode)
-    if (loggedIn) {
-      return {
-        type: 'error',
-      }
+    const authResult: {
+      success: boolean
+      credentials: AuthCredentialsWithDuration
+    } = JSON.parse(jsCodeResult)
+
+    if (!authResult.success || !authResult.credentials) {
+      return loginError
     }
 
-    return loginError
+    this.network.setAuthCreds(authResult.credentials)
+
+    return {
+      type: 'success',
+    }
   }
 
   /**
@@ -123,7 +123,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
    * */
   logout?: () => Awaitable<void>
 
-  serializeSession = () => ({ cookies: this.network.cookieJar.toJSON() })
+  serializeSession = () => ({ creds: this.network.getAuthCreds() })
 
   searchUsers?: (typed: string) => Awaitable<User[]>
 

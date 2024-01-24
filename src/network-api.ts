@@ -2,9 +2,10 @@ import {
   FetchOptions,
   texts,
 } from '@textshq/platform-sdk'
-import { CookieJar } from 'tough-cookie'
 import {
+  ACCESS_TOKEN_MIN_TTL,
   API_URL,
+  OAUTH_TOKEN_REFRESH_URL,
   REQUEST_HEADERS,
 } from './constants'
 import {
@@ -12,24 +13,57 @@ import {
   TumblrUserInfo,
   TumblrFetchResponse,
   TumblrHttpResponseBody,
+  AuthCredentialsWithDuration,
+  AuthCredentialsWithExpiration,
 } from './types'
 
 export class TumblrClient {
-  cookieJar: CookieJar
+  private authCreds: AuthCredentialsWithExpiration
 
   private httpClient = texts.createHttpClient()
 
-  /**
-   * Remember the auth cookies
-   */
-  authenticate = async (oauthCode: string) => {
-    console.log('tumblr.network.authenticate.oauthCode', oauthCode)
+  getAuthCreds = () => this.authCreds
+
+  private static areCredsWithDuration = (creds: AuthCredentialsWithDuration | AuthCredentialsWithExpiration): creds is AuthCredentialsWithDuration =>
+    !!(creds as AuthCredentialsWithDuration).expires_in
+
+  setAuthCreds = (creds: AuthCredentialsWithDuration | AuthCredentialsWithExpiration) => {
+    if (TumblrClient.areCredsWithDuration(creds)) {
+      const { expires_in, ...authCreds } = creds
+      this.authCreds = {
+        ...authCreds,
+        expires_at: Date.now() + expires_in * 1000 - ACCESS_TOKEN_MIN_TTL,
+      }
+    } else {
+      this.authCreds = creds
+    }
   }
 
   /**
-   * Checks if the user has properly logged in.
+   * Makes sure the access token is up to date. In case if access token
+   * is expired it updates it with a new one.
    */
-  static isLoggedIn = () => false
+  ensureUpdatedCreds = async () => {
+    if (!this.authCreds) {
+      throw new Error('Tumblr not logged in')
+    }
+
+    if (this.authCreds.expires_at > Date.now()) {
+      return
+    }
+
+    try {
+      const response = await this.httpClient.requestAsString(OAUTH_TOKEN_REFRESH_URL, {
+        headers: REQUEST_HEADERS,
+        body: JSON.stringify({
+          refresh_token: this.authCreds.refresh_token,
+        }),
+      })
+      this.setAuthCreds(JSON.parse(response.body) as AuthCredentialsWithDuration)
+    } catch (err) {
+      throw new Error(`Wasn't able to renew the access_token. Error: ${err}`)
+    }
+  }
 
   /**
    * Tumblr API tailored fetch.
@@ -38,14 +72,15 @@ export class TumblrClient {
     url: string,
     opts: FetchOptions = {},
   ): Promise<TumblrFetchResponse<TumblrHttpResponseBody<T> | AnyJSON>> => {
+    this.ensureUpdatedCreds()
     try {
       const response = await this.httpClient.requestAsString(url, {
         ...opts,
         headers: {
+          Authorization: `Bearer ${this.authCreds.access_token}`,
           ...REQUEST_HEADERS,
           ...(opts.headers || {}),
         },
-        cookieJar: this.cookieJar,
       })
       return {
         ...response,

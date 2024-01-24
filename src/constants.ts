@@ -17,11 +17,15 @@ export const API_KEY = 'FFNa7UzNzJcAH7fB5ukHph9PxO2iF5QfNTw8YyosPwOP9Cxwmw'
 export const OAUTH_STATE = 'texts.app.tumblr.oauth.state'
 
 /**
+ * Tumblr OAuth2 token refresh endpoint.
+ */
+export const OAUTH_TOKEN_REFRESH_URL = 'https://texts.com/api/tumblr/auth/refresh'
+
+/**
  * The headers that we include in each API request.
  */
 export const REQUEST_HEADERS = {
-  Accept: 'application/json;format=camelcase',
-  'Accept-Encoding': 'gzip, deflate, br',
+  Accept: 'application/json',
   'Content-Type': 'application/json',
   'User-Agent': texts.constants.USER_AGENT,
 }
@@ -30,3 +34,8 @@ export const REQUEST_HEADERS = {
  * The default, untitled blog name.
  */
 export const UNTITLED_BLOG = 'Untitled'
+
+/**
+ * The minimum amount of milliseconds the access token life time should have.
+ */
+export const ACCESS_TOKEN_MIN_TTL = 10_000
