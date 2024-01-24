@@ -29,7 +29,7 @@ export const mapCurrentUser = (user: TumblrUserInfo): CurrentUser => {
   return {
     ...user,
     displayText: primaryBlogTitle,
-    id: user.userUuid,
+    id: primaryBlog.uuid,
     username: user.name,
     email: user.email,
     fullName: user.name,
@@ -127,7 +127,7 @@ export const mapPaginatedMessages = (messages: TumblrMessages, blog: Blog): Pagi
   hasMore: !!messages.links?.next?.href,
 })
 
-const mapPaginatedPerticipants = (conversation: Conversation, currentUserBlog: Blog): Paginated<Participant> => ({
+const mapPaginatedParticipants = (conversation: Conversation, currentUserBlog: Blog): Paginated<Participant> => ({
   items: conversation.participants.map((participant: Blog): Participant => ({
     id: participant.uuid,
     username: participant.name,
@@ -156,7 +156,7 @@ export const mapThread = (conversation: Conversation, currentUser: TumblrUserInf
     /** If null, thread won't be visible to the user in the UI unless they explicitly search for it  */
     timestamp: new Date(conversation.lastModifiedTs),
     messages: mapPaginatedMessages(conversation.messages, blogForConversation),
-    participants: mapPaginatedPerticipants(conversation, blogForConversation),
+    participants: mapPaginatedParticipants(conversation, blogForConversation),
   })
 }
 
