@@ -1,11 +1,6 @@
 import { texts } from '@textshq/platform-sdk'
 
 /**
- * Base api url.
- */
-export const API_URL = 'https://api.tumblr.com/v2'
-
-/**
  * Tumblr api key for Texts.com
  */
 export const API_KEY = 'FFNa7UzNzJcAH7fB5ukHph9PxO2iF5QfNTw8YyosPwOP9Cxwmw'
@@ -39,3 +34,21 @@ export const UNTITLED_BLOG = 'Untitled'
  * The minimum amount of milliseconds the access token life time should have.
  */
 export const ACCESS_TOKEN_MIN_TTL = 10_000
+
+/*
+ * Base api url.
+ */
+const API_URL = 'https://www.tumblr.com/api/v2'
+
+export const API_URLS = {
+  BASE: API_URL,
+  /**
+   * User info url.
+   */
+  USER_INFO: `${API_URL}/user/info`,
+
+  /**
+   * Conversations url.
+   */
+  CONVERSATIONS: `${API_URL}/conversations`,
+}

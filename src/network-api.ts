@@ -1,11 +1,12 @@
 import {
   FetchOptions,
+  PaginationArg,
   texts,
 } from '@textshq/platform-sdk'
 import {
   ACCESS_TOKEN_MIN_TTL,
-  API_URL,
   OAUTH_TOKEN_REFRESH_URL,
+  API_URLS,
   REQUEST_HEADERS,
 } from './constants'
 import {
@@ -15,7 +16,14 @@ import {
   TumblrHttpResponseBody,
   AuthCredentialsWithDuration,
   AuthCredentialsWithExpiration,
+  Conversation,
+  ApiLinks,
 } from './types'
+
+/**
+ * Strips out the api version path, because we use /v2/ by default.
+ */
+const stripApiVersion = (path: string): string => path.replace(/^\/v2/, '')
 
 export class TumblrClient {
   private authCreds: AuthCredentialsWithExpiration
@@ -71,56 +79,46 @@ export class TumblrClient {
   private fetch = async <T = AnyJSON>(
     url: string,
     opts: FetchOptions = {},
-  ): Promise<TumblrFetchResponse<TumblrHttpResponseBody<T> | AnyJSON>> => {
+  ): Promise<TumblrFetchResponse<TumblrHttpResponseBody<T>>> => {
     this.ensureUpdatedCreds()
-    try {
-      const response = await this.httpClient.requestAsString(url, {
-        ...opts,
-        headers: {
-          Authorization: `Bearer ${this.authCreds.access_token}`,
-          ...REQUEST_HEADERS,
-          ...(opts.headers || {}),
-        },
-      })
-      return {
-        ...response,
-        json: JSON.parse(response.body),
-      }
-    } catch (error) {
-      texts.error('Tumblr Fetch Error', error)
-      return {
-        statusCode: 400,
-        body: `${error}`,
-        headers: {},
-        json: {},
-        error,
-      }
+    const response = await this.httpClient.requestAsString(url, {
+      ...opts,
+      headers: {
+        Authorization: `Bearer ${this.authCreds.access_token}`,
+        ...REQUEST_HEADERS,
+        ...(opts.headers || {}),
+      },
+    })
+    return {
+      ...response,
+      json: JSON.parse(response.body),
     }
   }
 
   /**
-   * Tells if the api response is a success or fail/error.
-   */
-  static isSuccessResponse = <SuccessType = AnyJSON, ErrorType = AnyJSON>(
-    response: TumblrFetchResponse<SuccessType> | TumblrFetchResponse<ErrorType>,
-  ): response is TumblrFetchResponse<SuccessType> =>
-    response.statusCode >= 200 && response.statusCode < 300
-
-  /**
    * Fetches the current user info.
    */
-  getCurrentUser = async (): Promise<
-  TumblrFetchResponse<TumblrUserInfo | AnyJSON>
-  > => {
-    const response = await this.fetch<{ user: TumblrUserInfo }>(`${API_URL}/user/info`)
+  getCurrentUser = async () => {
+    const response = await this.fetch<{ user: TumblrUserInfo }>(API_URLS.USER_INFO)
+    return {
+      ...response,
+      json: response.json.response,
+    }
+  }
 
-    if (TumblrClient.isSuccessResponse<TumblrHttpResponseBody<{ user: TumblrUserInfo }>>(response)) {
-      return {
-        ...response,
-        json: response.json.response.user,
-      }
+  /**
+   * Fetches the conversations.
+   */
+  getConversations = async (pagination?: PaginationArg) => {
+    let url = API_URLS.CONVERSATIONS
+    if (pagination?.cursor) {
+      url = `${API_URLS.BASE}${stripApiVersion(pagination.cursor)}`
     }
 
-    return response
+    const response = await this.fetch<{ conversations: Conversation[], links?: ApiLinks }>(url)
+    return {
+      ...response,
+      json: response.json.response,
+    }
   }
 }

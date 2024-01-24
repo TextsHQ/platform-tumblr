@@ -4,18 +4,18 @@ import {
   OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap,
   SearchMessageOptions, Thread, User, OverridablePlatformInfo, OnLoginEventCallback, ThreadFolderName,
   ThreadID, StickerPack, StickerPackID, Attachment, MessageID, UserID, PhoneNumber, AttachmentID,
-  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, texts,
+  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
 import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration, TumblrUserInfo } from './types'
-import { UNTITLED_BLOG } from './constants'
+import { mapCurrentUser, mapPaginatedThreads } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
 
-  currentUser: CurrentUser = null
+  currentUser: TumblrUserInfo = null
 
   /**
    * Called after new PlatformAPI()
@@ -28,6 +28,8 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
+  // Temporarily keeping an empty dispose() method to prevent errors while under development.
+  // eslint-disable-next-line class-methods-use-this
   dispose = async () => {}
 
   static getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
@@ -53,42 +55,12 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getCurrentUser = async (): Promise<CurrentUser> => {
     if (this.currentUser) {
-      return this.currentUser
+      return mapCurrentUser(this.currentUser)
     }
 
     const response = await this.network.getCurrentUser()
-    if (TumblrClient.isSuccessResponse<TumblrUserInfo>(response)) {
-      this.currentUser = TumblrPlatformAPI.formatUser(response.json)
-      return this.currentUser
-    }
-    texts.error('Tumblr.getCurrentUser failed', response)
-    return Promise.reject(response)
-  }
-
-  private static formatUser = (user: TumblrUserInfo): CurrentUser => {
-    const primaryBlog = user.blogs.find(({ primary }) => primary)
-    const primaryBlogTitle = primaryBlog.title && primaryBlog.title !== UNTITLED_BLOG
-      ? primaryBlog.title
-      : user.name
-    const avatarUrl = primaryBlog.avatar[0]?.url
-    return {
-      ...user,
-      displayText: primaryBlogTitle,
-      id: user.userUuid,
-      username: user.name,
-      email: user.email,
-      fullName: user.name,
-      nickname: user.name,
-      imgURL: avatarUrl,
-      isVerified: user.isEmailVerified,
-      social: {
-        coverImgURL: avatarUrl,
-        website: primaryBlog.url,
-        followers: {
-          count: primaryBlog.followers,
-        },
-      },
-    }
+    this.currentUser = response.json.user
+    return mapCurrentUser(this.currentUser)
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
@@ -135,7 +107,11 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getCustomEmojis?: () => Awaitable<CustomEmojiMap>
 
-  getThreads: (folderName: ThreadFolderName, pagination?: PaginationArg) => Awaitable<Paginated<Thread>>
+  getThreads = async (folderName: ThreadFolderName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
+    const response = await this.network.getConversations(pagination)
+    const { conversations, links } = response.json
+    return mapPaginatedThreads({ conversations, links, currentUser: this.currentUser })
+  }
 
   /** Messages should be sorted by timestamp asc → desc */
   getMessages: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Message>>
