@@ -38,7 +38,7 @@ export const ACCESS_TOKEN_MIN_TTL = 10_000
 /*
  * Base api url.
  */
-const API_URL = 'https://www.tumblr.com/api/v2'
+const API_URL = 'https://api.tumblr.com/v2'
 
 export const API_URLS = {
   BASE: API_URL,
