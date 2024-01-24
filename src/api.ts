@@ -65,12 +65,9 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
     const { jsCodeResult } = creds
-    const loginError: LoginResult = {
-      type: 'error',
-    }
 
     if (!jsCodeResult) {
-      return loginError
+      throw Error('jsCodeResult is falsey')
     }
 
     const authResult: {
@@ -79,7 +76,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     } = JSON.parse(jsCodeResult)
 
     if (!authResult.success || !authResult.credentials) {
-      return loginError
+      throw Error('Login failed')
     }
 
     this.network.setAuthCreds(authResult.credentials)
