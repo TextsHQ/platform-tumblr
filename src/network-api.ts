@@ -80,7 +80,7 @@ export class TumblrClient {
     url: string,
     opts: FetchOptions = {},
   ): Promise<TumblrFetchResponse<TumblrHttpResponseBody<T>>> => {
-    this.ensureUpdatedCreds()
+    await this.ensureUpdatedCreds()
     const response = await this.httpClient.requestAsString(url, {
       ...opts,
       headers: {
