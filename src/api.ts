@@ -10,7 +10,7 @@ import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
 import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration, TumblrUserInfo } from './types'
-import { mapCurrentUser, mapPaginatedThreads } from './mappers'
+import { getPrimaryBlog, mapCurrentUser, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
@@ -32,7 +32,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   // eslint-disable-next-line class-methods-use-this
   dispose = async () => {}
 
-  static getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
+  getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
     reactions: {
       supported: {},
       canReactWithAllEmojis: false,
@@ -45,7 +45,9 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     },
   })
 
-  subscribeToEvents: (onEvent: OnServerEventCallback) => Awaitable<void>
+  subscribeToEvents = (onEvent: OnServerEventCallback) => {
+
+  }
 
   onLoginEvent?: (onEvent: OnLoginEventCallback) => Awaitable<void>
 
@@ -111,7 +113,14 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   /** Messages should be sorted by timestamp asc → desc */
-  getMessages: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Message>>
+  getMessages = async (threadID: ThreadID): Promise<Paginated<Message>> => {
+    const primaryBlog = getPrimaryBlog(this.currentUser)
+    const response = await this.network.getMessages({
+      conversationId: threadID,
+      blogName: primaryBlog.name,
+    })
+    return mapPaginatedMessages(response.json.messages, primaryBlog)
+  }
 
   getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Participant>>
 

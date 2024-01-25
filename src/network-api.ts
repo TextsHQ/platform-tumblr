@@ -18,6 +18,9 @@ import {
   AuthCredentialsWithExpiration,
   Conversation,
   ApiLinks,
+  ConversationStatus,
+  Blog,
+  MessagesObject,
 } from './types'
 
 /**
@@ -116,6 +119,42 @@ export class TumblrClient {
     }
 
     const response = await this.fetch<{ conversations: Conversation[], links?: ApiLinks }>(url)
+    return {
+      ...response,
+      json: response.json.response,
+    }
+  }
+
+  /**
+   * Fetches the messages for conversation.
+   */
+  getMessages = async ({
+    conversationId,
+    blogName,
+    before,
+  }: {
+    conversationId: string | string
+    blogName: string
+    before?: number | string
+  }) => {
+    let url = `${API_URLS.MESSAGES}?participant=${blogName}.tumblr.com&conversation_id=${conversationId}`
+    if (before) {
+      url = `${url}&before=${before}`
+    }
+    const response = await this.fetch<{
+      objectType: string
+      id: string
+      status: ConversationStatus
+      lastModifiedTs: number
+      lastReadTs: number
+      canSend: boolean
+      unreadMesssagesCount: number
+      isPossibleSpam: boolean
+      isBlurredImages: boolean
+      participants: Blog[]
+      messages: MessagesObject
+      token: string
+    }>(url)
     return {
       ...response,
       json: response.json.response,
