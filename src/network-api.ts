@@ -1,6 +1,9 @@
 import {
   FetchOptions,
+  OnServerEventCallback,
   PaginationArg,
+  ServerEvent,
+  ServerEventType,
   texts,
 } from '@textshq/platform-sdk'
 import {
@@ -29,6 +32,12 @@ export class TumblrClient {
   private authCreds: AuthCredentialsWithExpiration
 
   private httpClient = texts.createHttpClient()
+
+  pendingEventsQueue: ServerEvent[] = []
+
+  eventCallback: OnServerEventCallback = (events: ServerEvent[]) => {
+    this.pendingEventsQueue.push(...events)
+  }
 
   getAuthCreds = () => this.authCreds
 
@@ -68,6 +77,9 @@ export class TumblrClient {
         }),
       })
       this.setAuthCreds(JSON.parse(response.body) as AuthCredentialsWithDuration)
+      this.eventCallback([{
+        type: ServerEventType.SESSION_UPDATED,
+      }])
     } catch (err) {
       throw new Error(`Wasn't able to renew the access_token. Error: ${err}`)
     }

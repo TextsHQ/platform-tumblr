@@ -45,7 +45,13 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     },
   })
 
-  subscribeToEvents: (onEvent: OnServerEventCallback) => Awaitable<void>
+  subscribeToEvents = (onEvent: OnServerEventCallback) => {
+    this.network.eventCallback = onEvent
+    if (this.network.pendingEventsQueue.length > 0) {
+      onEvent(this.network.pendingEventsQueue)
+      this.network.pendingEventsQueue.length = 0
+    }
+  }
 
   onLoginEvent?: (onEvent: OnLoginEventCallback) => Awaitable<void>
 
