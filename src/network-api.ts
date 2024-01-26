@@ -143,15 +143,15 @@ export class TumblrClient {
   getMessages = async ({
     conversationId,
     blogName,
-    before,
+    pagination,
   }: {
-    conversationId: string | string
+    conversationId: string
     blogName: string
-    before?: number | string
+    pagination?: PaginationArg
   }) => {
     let url = `${API_URLS.MESSAGES}?participant=${blogName}.tumblr.com&conversation_id=${conversationId}`
-    if (before) {
-      url = `${url}&before=${before}`
+    if (pagination) {
+      url = `${url}&${pagination.direction}=${pagination.cursor}`
     }
     const response = await this.fetch<{
       objectType: string
@@ -164,12 +164,21 @@ export class TumblrClient {
       isPossibleSpam: boolean
       isBlurredImages: boolean
       participants: Blog[]
-      messages: MessagesObject
+      messages: {
+        data: MessagesObject['data']
+        _links?: MessagesObject['links']
+      }
       token: string
     }>(url)
     return {
       ...response,
-      json: response.json.response,
+      json: {
+        ...response.json.response,
+        messages: {
+          ...response.json.response.messages,
+          links: response.json.response.messages._links,
+        },
+      },
     }
   }
 }

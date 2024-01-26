@@ -117,11 +117,12 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   /** Messages should be sorted by timestamp asc → desc */
-  getMessages = async (threadID: ThreadID): Promise<Paginated<Message>> => {
+  getMessages = async (threadID: ThreadID, pagination?: PaginationArg): Promise<Paginated<Message>> => {
     const primaryBlog = getPrimaryBlog(this.currentUser)
     const response = await this.network.getMessages({
       conversationId: threadID,
       blogName: primaryBlog.name,
+      pagination,
     })
     return mapPaginatedMessages(response.json.messages, primaryBlog)
   }

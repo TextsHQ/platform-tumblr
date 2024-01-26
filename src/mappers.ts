@@ -136,7 +136,9 @@ export const mapMessage = (message: TumblrMessage, currentUserBlog: Blog): Messa
 
 export const mapPaginatedMessages = (messages: TumblrMessages, blog: Blog): Paginated<Message> => ({
   items: messages.data.map(message => mapMessage(message, blog)),
-  hasMore: !!messages.links?.next?.href,
+  hasMore: !!messages.data.length,
+  oldestCursor: messages.data[0]?.ts,
+  newestCursor: messages.data[messages.data.length - 1]?.ts,
 })
 
 const mapPaginatedParticipants = (conversation: Conversation, currentUserBlog: Blog): Paginated<Participant> => ({
