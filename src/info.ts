@@ -15,14 +15,26 @@ const info: PlatformInfo = {
   attributes: new Set([
   ]),
   loginMode: 'browser',
-  browserLogin: {
-    url: 'https://tumblr.com/login',
-    authCookieName: 'sid',
-    runJSOnLaunch: `
-      document.querySelector("header").parentElement.style.display = "none";
-      document.querySelector('[data-app-type="apple"]').parentElement.parentElement.style.display = "none";
+  browserLogins: [
+    {
+      url: 'https://texts.com/api/tumblr/auth/start',
+      runJSOnClose: 'window.tumblrLoginResult',
+      runJSOnNavigate: `
+      try {
+        const iframe = document.createElement('iframe')
+        document.head.append(iframe)
+        const i = setInterval(() => {
+          const t = iframe.contentWindow.localStorage['tumblr-login-result']
+          if (t) {
+            window.tumblrLoginResult = t
+            clearInterval(i)
+            setTimeout(() => window.close(), 500)
+          }
+        }, 200)
+      } finally {}
     `,
-  },
+    },
+  ],
 }
 
 export default info

@@ -8,13 +8,12 @@ import {
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
 
-import { CookieJar } from 'tough-cookie'
 import { TumblrClient } from './network-api'
+import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration, TumblrUserInfo } from './types'
 import { mapCurrentUser, mapPaginatedThreads } from './mappers'
-import { TumblrUserInfo } from './types'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
-  readonly tumblrClient = new TumblrClient()
+  readonly network = new TumblrClient()
 
   currentUser: TumblrUserInfo = null
 
@@ -22,13 +21,10 @@ export default class TumblrPlatformAPI implements PlatformAPI {
    * Called after new PlatformAPI()
    * @param session - return value of `serializeSession`, `undefined` if not logged in
    */
-  init = async (session?: { cookies?: CookieJar.Serialized }) => {
-    const serializedCookieJar: CookieJar.Serialized = session?.cookies
-    if (!serializedCookieJar) {
-      return
+  init = (session: { creds?: AuthCredentialsWithExpiration }) => {
+    if (session?.creds) {
+      this.network.setAuthCreds(session.creds)
     }
-
-    await this.tumblrClient.setLoginState(serializedCookieJar)
   }
 
   /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
@@ -49,7 +45,13 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     },
   })
 
-  subscribeToEvents: (onEvent: OnServerEventCallback) => Awaitable<void>
+  subscribeToEvents = (onEvent: OnServerEventCallback) => {
+    this.network.eventCallback = onEvent
+    if (this.network.pendingEventsQueue.length > 0) {
+      onEvent(this.network.pendingEventsQueue)
+      this.network.pendingEventsQueue.length = 0
+    }
+  }
 
   onLoginEvent?: (onEvent: OnLoginEventCallback) => Awaitable<void>
 
@@ -62,19 +64,34 @@ export default class TumblrPlatformAPI implements PlatformAPI {
       return mapCurrentUser(this.currentUser)
     }
 
-    const response = await this.tumblrClient.getCurrentUser()
+    const response = await this.network.getCurrentUser()
     this.currentUser = response.json.user
     return mapCurrentUser(this.currentUser)
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
-    const cookieJar: CookieJar.Serialized = creds?.cookieJarJSON
+    const { jsCodeResult } = creds
 
-    if (!TumblrClient.isLoggedIn(cookieJar)) {
-      return { type: 'error' }
+    if (!jsCodeResult) {
+      return {
+        type: 'error',
+        errorMessage: "We couldn't find your account.",
+      }
     }
 
-    await this.tumblrClient.setLoginState(cookieJar)
+    const authResult: {
+      success: boolean
+      credentials: AuthCredentialsWithDuration
+    } = JSON.parse(jsCodeResult)
+
+    if (!authResult.success || !authResult.credentials) {
+      return {
+        type: 'error',
+        errorMessage: 'Login Failed.',
+      }
+    }
+
+    this.network.setAuthCreds(authResult.credentials)
 
     return {
       type: 'success',
@@ -87,7 +104,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
    * */
   logout?: () => Awaitable<void>
 
-  serializeSession = () => ({ cookies: this.tumblrClient.cookieJar.toJSON() })
+  serializeSession = () => ({ creds: this.network.getAuthCreds() })
 
   searchUsers?: (typed: string) => Awaitable<User[]>
 
@@ -100,7 +117,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   getCustomEmojis?: () => Awaitable<CustomEmojiMap>
 
   getThreads = async (folderName: ThreadFolderName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
-    const response = await this.tumblrClient.getConversations(pagination)
+    const response = await this.network.getConversations(pagination)
     const { conversations, links } = response.json
     return mapPaginatedThreads({ conversations, links, currentUser: this.currentUser })
   }
