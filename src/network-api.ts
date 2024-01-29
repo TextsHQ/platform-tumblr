@@ -114,7 +114,7 @@ export class TumblrClient {
    * Fetches the current user info.
    */
   getCurrentUser = async () => {
-    const response = await this.fetch<{ user: TumblrUserInfo }>(API_URLS.USER_INFO)
+    const response = await this.fetch<{ user: Omit<TumblrUserInfo, 'activeBlog'> }>(API_URLS.USER_INFO)
     return {
       ...response,
       json: response.json.response,

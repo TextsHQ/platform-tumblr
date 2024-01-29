@@ -56,6 +56,7 @@ export interface TumblrUserInfo {
   name: string
   email: string
   blogs: Blog[]
+  activeBlog: Blog
   isEmailVerified: boolean
 }
 

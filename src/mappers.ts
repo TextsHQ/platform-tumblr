@@ -20,35 +20,23 @@ const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => {
   return social
 }
 
-export const getPrimaryBlog = (user: TumblrUserInfo): Blog => {
-  const primaryBlog = user.blogs.find(({ primary }) => primary)
-
-  // This should never happen. But if it happens we want to know
-  // right away.
-  if (!primaryBlog) {
-    throw Error("Unable to detect user's primary blog")
-  }
-
-  return primaryBlog
-}
-
 export const mapCurrentUser = (user: TumblrUserInfo): CurrentUser => {
-  const primaryBlog = getPrimaryBlog(user)
-  const primaryBlogTitle = primaryBlog.title && primaryBlog.title !== UNTITLED_BLOG
-    ? primaryBlog.title
+  const { activeBlog } = user
+  const activeBlogTitle = activeBlog.title && activeBlog.title !== UNTITLED_BLOG
+    ? activeBlog.title
     : user.name
-  const avatarUrl = primaryBlog.avatar[0]?.url
+  const avatarUrl = activeBlog.avatar[0]?.url
   return {
     ...user,
-    displayText: primaryBlogTitle,
-    id: primaryBlog.uuid,
+    displayText: activeBlogTitle,
+    id: activeBlog.uuid,
     username: user.name,
     email: user.email,
     fullName: user.name,
     nickname: user.name,
     imgURL: avatarUrl,
     isVerified: user.isEmailVerified,
-    social: mapUserSocialAttributes(primaryBlog),
+    social: mapUserSocialAttributes(activeBlog),
   }
 }
 
