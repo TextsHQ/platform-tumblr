@@ -1,5 +1,4 @@
 import { PlatformInfo, MessageDeletionMode } from '@textshq/platform-sdk'
-import { API_KEY, OAUTH_STATE } from './constants'
 
 const info: PlatformInfo = {
   name: 'Tumblr',
@@ -17,7 +16,7 @@ const info: PlatformInfo = {
   ]),
   loginMode: 'browser',
   browserLogin: {
-    url: `https://www.tumblr.com/oauth2/authorize?client_id=${API_KEY}&response_type=code&scope=write offline_access&state=${OAUTH_STATE}`,
+    url: 'https://texts.com/api/tumblr/auth/start',
     runJSOnClose: 'window.tumblrLoginResult',
     runJSOnNavigate: `
       try {
