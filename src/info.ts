@@ -15,10 +15,11 @@ const info: PlatformInfo = {
   attributes: new Set([
   ]),
   loginMode: 'browser',
-  browserLogin: {
-    url: 'https://texts.com/api/tumblr/auth/start',
-    runJSOnClose: 'window.tumblrLoginResult',
-    runJSOnNavigate: `
+  browserLogins: [
+    {
+      url: 'https://texts.com/api/tumblr/auth/start',
+      runJSOnClose: 'window.tumblrLoginResult',
+      runJSOnNavigate: `
       try {
         const iframe = document.createElement('iframe')
         document.head.append(iframe)
@@ -32,7 +33,8 @@ const info: PlatformInfo = {
         }, 200)
       } finally {}
     `,
-  },
+    },
+  ],
 }
 
 export default info
