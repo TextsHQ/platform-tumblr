@@ -1,17 +1,6 @@
 import { texts } from '@textshq/platform-sdk'
 
 /**
- * Tumblr api key for Texts.com
- */
-export const API_KEY = 'jv6c8LgTQ9Ldf9YqF3KUSgX2MbdKt3lfjQSV37NJua1DUHeXKX'
-
-/**
- * OAuth state parameter. Used to identify unique authorization requests.
- * The value is arbitrary and makes no difference for desktop app.
- */
-export const OAUTH_STATE = 'texts.app.tumblr.oauth.state'
-
-/**
  * Tumblr OAuth2 token refresh endpoint.
  */
 export const OAUTH_TOKEN_REFRESH_URL = 'https://texts.com/api/tumblr/auth/refresh'

@@ -73,7 +73,10 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     const { jsCodeResult } = creds
 
     if (!jsCodeResult) {
-      throw Error('jsCodeResult is falsey')
+      return {
+        type: 'error',
+        errorMessage: "We couldn't find your account.",
+      }
     }
 
     const authResult: {
@@ -82,7 +85,10 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     } = JSON.parse(jsCodeResult)
 
     if (!authResult.success || !authResult.credentials) {
-      throw Error('Login failed')
+      return {
+        type: 'error',
+        errorMessage: 'Login Failed.',
+      }
     }
 
     this.network.setAuthCreds(authResult.credentials)
