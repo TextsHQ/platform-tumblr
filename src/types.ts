@@ -152,20 +152,19 @@ export interface Post {
   postUrl: string
   content: Block[]
   type: string
+  shortUrl?: string
+  summary?: string
 }
 
 export type Block = TextBlock | ImageBlock
 
-export const isTextBlock = (block: TextBlock | ImageBlock): block is TextBlock => {
-  const textBlock = block as TextBlock
-  return !!textBlock.text
-}
-
 export interface TextBlock {
+  type: 'text'
   text: string
 }
 
 export interface ImageBlock {
+  type: 'image'
   media: Media[]
   altText?: string
   caption?: string
