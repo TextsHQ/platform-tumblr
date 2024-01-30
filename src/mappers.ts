@@ -77,7 +77,7 @@ export const mapMessageText = (message: TumblrMessage): string => {
     }, '')
   }
 
-  return message.type
+  return ''
 }
 
 /**
