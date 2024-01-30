@@ -164,21 +164,12 @@ export class TumblrClient {
       isPossibleSpam: boolean
       isBlurredImages: boolean
       participants: Blog[]
-      messages: {
-        data: MessagesObject['data']
-        _links?: MessagesObject['links']
-      }
+      messages: MessagesObject
       token: string
     }>(url)
     return {
       ...response,
-      json: {
-        ...response.json.response,
-        messages: {
-          ...response.json.response.messages,
-          links: response.json.response.messages._links,
-        },
-      },
+      json: response.json.response,
     }
   }
 }

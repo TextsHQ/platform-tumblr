@@ -9,7 +9,7 @@ export const OAUTH_TOKEN_REFRESH_URL = 'https://texts.com/api/tumblr/auth/refres
  * The headers that we include in each API request.
  */
 export const REQUEST_HEADERS = {
-  Accept: 'application/json',
+  Accept: 'application/json;format=camelcase',
   'Content-Type': 'application/json',
   'User-Agent': texts.constants.USER_AGENT,
 }

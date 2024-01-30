@@ -1,4 +1,4 @@
-import { CurrentUser, Message, Paginated, Participant, Thread, UserSocialAttributes } from '@textshq/platform-sdk'
+import { Attachment, AttachmentType, CurrentUser, Message, Paginated, Participant, Thread, UserSocialAttributes } from '@textshq/platform-sdk'
 import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, isTextBlock, Block, Blog, ApiLinks } from './types'
 import { UNTITLED_BLOG } from './constants'
 
@@ -111,16 +111,43 @@ const timestampToDate = (timestamp: string | number): Date => {
   return new Date(timestampInt)
 }
 
-export const mapMessage = (message: TumblrMessage, currentUserBlog: Blog): Message => ({
-  id: message.ts,
-  timestamp: timestampToDate(message.ts),
-  senderID: message.participant,
-  text: mapMessageText(message),
-  seen: isMessageSeen(message),
-  isDelivered: isMessageDelivered(message),
-  isSender: message.participant === currentUserBlog.uuid,
-  isErrored: message.couldNotSend,
-})
+const mapImageToAttachment = (image: TumblrMessage['images'][0]): Attachment => {
+  if (image.originalSize) {
+    const img = image.originalSize
+    return {
+      id: img.url,
+      type: AttachmentType.IMG,
+      size: {
+        width: img.width,
+        height: img.height,
+      },
+      mimeType: img.type,
+      isGif: img.type === 'image/gif',
+      srcURL: img.url,
+    }
+  }
+}
+
+export const mapMessage = (message: TumblrMessage, currentUserBlog: Blog): Message => {
+  const attachments = []
+  if (message.type === 'IMAGE') {
+    console.log('tumblr.mapMessage.message.type', message.type)
+    const imageAttachments = message.images?.map(mapImageToAttachment).filter(i => i)
+    attachments.push(...imageAttachments)
+  }
+
+  return {
+    id: message.ts,
+    timestamp: timestampToDate(message.ts),
+    senderID: message.participant,
+    text: mapMessageText(message),
+    seen: isMessageSeen(message),
+    isDelivered: isMessageDelivered(message),
+    isSender: message.participant === currentUserBlog.uuid,
+    isErrored: message.couldNotSend,
+    attachments,
+  }
+}
 
 export const mapPaginatedMessages = (messages: TumblrMessages, blog: Blog): Paginated<Message> => ({
   items: messages.data.map(message => mapMessage(message, blog)),

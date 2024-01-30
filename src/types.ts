@@ -166,24 +166,31 @@ export interface TextBlock {
 }
 
 export interface ImageBlock {
-  media: Image[]
+  media: Media[]
   altText?: string
   caption?: string
 }
 
-export interface Image {
-  poster?: BaseImage
-  video?: ImageAsVideo[]
+export interface Media {
+  mediaKey: string
+  type: MimeType
+  width: number
+  height: number
+  poster?: Media
+  url: string
+  hasOriginalDimension?: boolean
 }
 
-export interface BaseImage {
+export interface Image {
   width: number
   height: number
   url: string
-  type: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
+  type?: MimeType
 }
 
-export type ImageAsVideo = BaseImage & {
+type MimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
+
+export type ImageAsVideo = Image & {
   type: 'video/mp4'
 }
 
