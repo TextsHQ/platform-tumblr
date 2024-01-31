@@ -2,7 +2,7 @@ import {
   ActivityType, Awaitable, CurrentUser, CustomEmojiMap, FetchInfo, LoginCreds,
   LoginResult, Message, MessageContent, MessageLink, MessageSendOptions, OnConnStateChangeCallback,
   OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap,
-  SearchMessageOptions, Thread, User, OverridablePlatformInfo, OnLoginEventCallback, ThreadFolderName,
+  SearchMessageOptions, Thread, User, OnLoginEventCallback, ThreadFolderName,
   ThreadID, StickerPack, StickerPackID, Attachment, MessageID, UserID, PhoneNumber, AttachmentID,
   NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo,
 } from '@textshq/platform-sdk'
@@ -31,19 +31,6 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   // Temporarily keeping an empty dispose() method to prevent errors while under development.
   // eslint-disable-next-line class-methods-use-this
   dispose = async () => {}
-
-  getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
-    reactions: {
-      supported: {},
-      canReactWithAllEmojis: false,
-      allowsMultipleReactionsToSingleMessage: false,
-    },
-    attachments: {
-      noSupportForVideo: true,
-      noSupportForAudio: true,
-      noSupportForFiles: true,
-    },
-  })
 
   subscribeToEvents = (onEvent: OnServerEventCallback) => {
     this.network.eventCallback = onEvent

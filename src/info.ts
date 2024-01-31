@@ -35,6 +35,16 @@ const info: PlatformInfo = {
     `,
     },
   ],
+  reactions: {
+    supported: {},
+    canReactWithAllEmojis: false,
+    allowsMultipleReactionsToSingleMessage: false,
+  },
+  attachments: {
+    noSupportForVideo: true,
+    noSupportForAudio: true,
+    noSupportForFiles: true,
+  },
 }
 
 export default info
