@@ -1,5 +1,5 @@
-import { CurrentUser, Message, Paginated, Participant, Thread, UserSocialAttributes } from '@textshq/platform-sdk'
-import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, isTextBlock, Block, Blog, ApiLinks } from './types'
+import { Attachment, AttachmentType, CurrentUser, Message, MessageLink, Paginated, Participant, Thread, UserSocialAttributes } from '@textshq/platform-sdk'
+import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, Blog, ApiLinks } from './types'
 import { UNTITLED_BLOG } from './constants'
 
 const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => {
@@ -56,31 +56,6 @@ const getLastReadMessageID = (conversation: Conversation): string => conversatio
 })?.ts
 
 /**
- * Returns a crude string representation of the TumblrMessage object.
- *
- * @todo Not a final implementation. Update when the support for attachments/images
- * are introduced.
- */
-export const mapMessageText = (message: TumblrMessage): string => {
-  if (message.type === 'TEXT') {
-    return message.content.text
-  } if (message.type === 'POSTREF') {
-    const { content } = message.post
-    return content.reduce((result: string, block: Block) => {
-      if (isTextBlock(block)) {
-        return `${result}\n${block.text}`
-      }
-      /**
-       * @todo Below needs further mapping.
-       */
-      return `${result}\n  image: ${block.media[0].poster?.url}`
-    }, '')
-  }
-
-  return message.type
-}
-
-/**
  * Tries to infer if the message is seen or not from the optional
  * TumblrMessage.unread property.
  */
@@ -111,16 +86,94 @@ const timestampToDate = (timestamp: string | number): Date => {
   return new Date(timestampInt)
 }
 
-export const mapMessage = (message: TumblrMessage, currentUserBlog: Blog): Message => ({
-  id: message.ts,
-  timestamp: timestampToDate(message.ts),
-  senderID: message.participant,
-  text: mapMessageText(message),
-  seen: isMessageSeen(message),
-  isDelivered: isMessageDelivered(message),
-  isSender: message.participant === currentUserBlog.uuid,
-  isErrored: message.couldNotSend,
-})
+const mapImageToAttachment = (image: TumblrMessage['images'][0]): Attachment => {
+  if (!image.originalSize) return
+  const img = image.originalSize
+  return {
+    id: img.url,
+    type: AttachmentType.IMG,
+    size: {
+      width: img.width,
+      height: img.height,
+    },
+    mimeType: img.type,
+    isGif: img.type === 'image/gif',
+    srcURL: img.url,
+  }
+}
+
+interface MapPostToMessageReturns {
+  attachments: Attachment[]
+  links: MessageLink[]
+  textHeading: string
+}
+
+const mapPostToMessage = (message: TumblrMessage): MapPostToMessageReturns => {
+  const result: MapPostToMessageReturns = {
+    attachments: [],
+    links: [],
+    textHeading: '',
+  }
+  if (message.post?.content) {
+    for (const block of message.post.content) {
+      if (block.type === 'text' && !message.post.summary) {
+        result.textHeading = block.text
+      } else if (block.type === 'image') {
+        result.textHeading = block.caption
+        const media = block.media[0]
+        if (media) {
+          result.attachments.push({
+            id: media.mediaKey,
+            srcURL: media.url,
+            type: AttachmentType.IMG,
+            size: {
+              width: media.width,
+              height: media.height,
+            },
+            posterImg: media.poster?.url,
+            mimeType: media.type,
+            isGif: media.type === 'image/gif',
+          })
+        }
+      }
+    }
+  }
+  if (message.post.postUrl) {
+    result.links.push({
+      url: message.post.postUrl,
+      title: message.post.summary || '',
+    })
+  }
+
+  return result
+}
+
+export const mapMessage = (message: TumblrMessage, currentUserBlog: Blog): Message => {
+  const result: Message = {
+    id: message.ts,
+    timestamp: timestampToDate(message.ts),
+    senderID: message.participant,
+    text: message.content?.text,
+    seen: isMessageSeen(message),
+    isDelivered: isMessageDelivered(message),
+    isSender: message.participant === currentUserBlog.uuid,
+    isErrored: message.couldNotSend,
+  }
+
+  if (message.type === 'IMAGE') {
+    return {
+      ...result,
+      attachments: message.images?.map(mapImageToAttachment).filter(i => i),
+    }
+  } if (message.type === 'POSTREF') {
+    return {
+      ...result,
+      ...mapPostToMessage(message),
+    }
+  }
+
+  return result
+}
 
 export const mapPaginatedMessages = (messages: TumblrMessages, blog: Blog): Paginated<Message> => ({
   items: messages.data.map(message => mapMessage(message, blog)),
@@ -152,7 +205,7 @@ export const mapThread = (conversation: Conversation, currentUser: TumblrUserInf
     /** ID of the last message that the current user has read */
     lastReadMessageID,
     /** If true, messages cannot be sent in the thread */
-    isReadOnly: conversation.canSend,
+    isReadOnly: !conversation.canSend,
     isArchived: conversation.status === 'INACTIVE',
     type: 'single',
     /** If null, thread won't be visible to the user in the UI unless they explicitly search for it  */

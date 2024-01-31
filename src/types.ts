@@ -152,38 +152,44 @@ export interface Post {
   postUrl: string
   content: Block[]
   type: string
+  shortUrl?: string
+  summary?: string
 }
 
 export type Block = TextBlock | ImageBlock
 
-export const isTextBlock = (block: TextBlock | ImageBlock): block is TextBlock => {
-  const textBlock = block as TextBlock
-  return !!textBlock.text
-}
-
 export interface TextBlock {
+  type: 'text'
   text: string
 }
 
 export interface ImageBlock {
-  media: Image[]
+  type: 'image'
+  media: Media[]
   altText?: string
   caption?: string
 }
 
-export interface Image {
-  poster?: BaseImage
-  video?: ImageAsVideo[]
+export interface Media {
+  mediaKey: string
+  type: MimeType
+  width: number
+  height: number
+  poster?: Media
+  url: string
+  hasOriginalDimension?: boolean
 }
 
-export interface BaseImage {
+export interface Image {
   width: number
   height: number
   url: string
-  type: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
+  type?: MimeType
 }
 
-export type ImageAsVideo = BaseImage & {
+type MimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
+
+export type ImageAsVideo = Image & {
   type: 'video/mp4'
 }
 
