@@ -21,6 +21,9 @@ import {
   AuthCredentialsWithExpiration,
   Conversation,
   ApiLinks,
+  ConversationStatus,
+  Blog,
+  MessagesObject,
 } from './types'
 
 /**
@@ -111,7 +114,7 @@ export class TumblrClient {
    * Fetches the current user info.
    */
   getCurrentUser = async () => {
-    const response = await this.fetch<{ user: TumblrUserInfo }>(API_URLS.USER_INFO)
+    const response = await this.fetch<{ user: Omit<TumblrUserInfo, 'activeBlog'> }>(API_URLS.USER_INFO)
     return {
       ...response,
       json: response.json.response,
@@ -131,6 +134,51 @@ export class TumblrClient {
     return {
       ...response,
       json: response.json.response,
+    }
+  }
+
+  /**
+   * Fetches the messages for conversation.
+   */
+  getMessages = async ({
+    conversationId,
+    blogName,
+    pagination,
+  }: {
+    conversationId: string
+    blogName: string
+    pagination?: PaginationArg
+  }) => {
+    let url = `${API_URLS.MESSAGES}?participant=${blogName}.tumblr.com&conversation_id=${conversationId}`
+    if (pagination) {
+      url = `${url}&${pagination.direction}=${pagination.cursor}`
+    }
+    const response = await this.fetch<{
+      objectType: string
+      id: string
+      status: ConversationStatus
+      lastModifiedTs: number
+      lastReadTs: number
+      canSend: boolean
+      unreadMesssagesCount: number
+      isPossibleSpam: boolean
+      isBlurredImages: boolean
+      participants: Blog[]
+      messages: {
+        data: MessagesObject['data']
+        _links?: MessagesObject['links']
+      }
+      token: string
+    }>(url)
+    return {
+      ...response,
+      json: {
+        ...response.json.response,
+        messages: {
+          ...response.json.response.messages,
+          links: response.json.response.messages._links,
+        },
+      },
     }
   }
 }

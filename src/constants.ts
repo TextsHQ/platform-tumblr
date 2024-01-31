@@ -40,4 +40,10 @@ export const API_URLS = {
    * Conversations url.
    */
   CONVERSATIONS: `${API_URL}/conversations`,
+
+  /**
+   * Messages url.
+   */
+  MESSAGES: `${API_URL}/conversations/messages`,
+
 }

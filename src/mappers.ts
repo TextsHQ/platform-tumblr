@@ -21,22 +21,22 @@ const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => {
 }
 
 export const mapCurrentUser = (user: TumblrUserInfo): CurrentUser => {
-  const primaryBlog = user.blogs.find(({ primary }) => primary)
-  const primaryBlogTitle = primaryBlog.title && primaryBlog.title !== UNTITLED_BLOG
-    ? primaryBlog.title
+  const { activeBlog } = user
+  const activeBlogTitle = activeBlog.title && activeBlog.title !== UNTITLED_BLOG
+    ? activeBlog.title
     : user.name
-  const avatarUrl = primaryBlog.avatar[0]?.url
+  const avatarUrl = activeBlog.avatar[0]?.url
   return {
     ...user,
-    displayText: primaryBlogTitle,
-    id: user.userUuid,
+    displayText: activeBlogTitle,
+    id: activeBlog.uuid,
     username: user.name,
     email: user.email,
     fullName: user.name,
     nickname: user.name,
     imgURL: avatarUrl,
     isVerified: user.isEmailVerified,
-    social: mapUserSocialAttributes(primaryBlog),
+    social: mapUserSocialAttributes(activeBlog),
   }
 }
 
@@ -77,7 +77,7 @@ export const mapMessageText = (message: TumblrMessage): string => {
     }, '')
   }
 
-  return ''
+  return message.type
 }
 
 /**
@@ -124,10 +124,12 @@ export const mapMessage = (message: TumblrMessage, currentUserBlog: Blog): Messa
 
 export const mapPaginatedMessages = (messages: TumblrMessages, blog: Blog): Paginated<Message> => ({
   items: messages.data.map(message => mapMessage(message, blog)),
-  hasMore: !!messages.links?.next?.href,
+  hasMore: !!messages.data.length,
+  oldestCursor: messages.data[0]?.ts,
+  newestCursor: messages.data[messages.data.length - 1]?.ts,
 })
 
-const mapPaginatedPerticipants = (conversation: Conversation, currentUserBlog: Blog): Paginated<Participant> => ({
+const mapPaginatedParticipants = (conversation: Conversation, currentUserBlog: Blog): Paginated<Participant> => ({
   items: conversation.participants.map((participant: Blog): Participant => ({
     id: participant.uuid,
     username: participant.name,
@@ -156,7 +158,7 @@ export const mapThread = (conversation: Conversation, currentUser: TumblrUserInf
     /** If null, thread won't be visible to the user in the UI unless they explicitly search for it  */
     timestamp: new Date(conversation.lastModifiedTs),
     messages: mapPaginatedMessages(conversation.messages, blogForConversation),
-    participants: mapPaginatedPerticipants(conversation, blogForConversation),
+    participants: mapPaginatedParticipants(conversation, blogForConversation),
   })
 }
 

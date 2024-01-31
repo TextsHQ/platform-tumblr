@@ -56,6 +56,7 @@ export interface TumblrUserInfo {
   name: string
   email: string
   blogs: Blog[]
+  activeBlog: Blog
   isEmailVerified: boolean
 }
 
@@ -85,7 +86,7 @@ interface Avatar {
 export interface Conversation {
   objectType: 'conversation' | 'message'
   id: number | string
-  status: 'ACTIVE' | 'INACTIVE'
+  status: ConversationStatus
   lastModifiedTs: number
   lastReadTs: number
   unreadMessagesCount: number
@@ -95,6 +96,8 @@ export interface Conversation {
   participants: Blog[]
   messages: MessagesObject
 }
+
+export type ConversationStatus = 'ACTIVE' | 'INACTIVE'
 
 export interface MessagesObject {
   data: Message[]

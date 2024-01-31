@@ -10,7 +10,7 @@ import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
 import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration, TumblrUserInfo } from './types'
-import { mapCurrentUser, mapPaginatedThreads } from './mappers'
+import { mapCurrentUser, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
@@ -32,7 +32,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   // eslint-disable-next-line class-methods-use-this
   dispose = async () => {}
 
-  static getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
+  getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
     reactions: {
       supported: {},
       canReactWithAllEmojis: false,
@@ -64,8 +64,20 @@ export default class TumblrPlatformAPI implements PlatformAPI {
       return mapCurrentUser(this.currentUser)
     }
 
-    const response = await this.network.getCurrentUser()
-    this.currentUser = response.json.user
+    const { json: { user } } = await this.network.getCurrentUser()
+    const primaryBlog = user.blogs.find(({ primary }) => primary)
+
+    // This should never happen. But if it happens we want to know
+    // right away.
+    if (!primaryBlog) {
+      throw Error("Unable to detect user's primary blog")
+    }
+
+    this.currentUser = {
+      ...user,
+      activeBlog: primaryBlog,
+    }
+
     return mapCurrentUser(this.currentUser)
   }
 
@@ -123,7 +135,14 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   /** Messages should be sorted by timestamp asc → desc */
-  getMessages: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Message>>
+  getMessages = async (threadID: ThreadID, pagination?: PaginationArg): Promise<Paginated<Message>> => {
+    const response = await this.network.getMessages({
+      conversationId: threadID,
+      blogName: this.currentUser.activeBlog.name,
+      pagination,
+    })
+    return mapPaginatedMessages(response.json.messages, this.currentUser.activeBlog)
+  }
 
   getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Participant>>
 
