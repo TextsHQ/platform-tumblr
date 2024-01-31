@@ -87,19 +87,18 @@ const timestampToDate = (timestamp: string | number): Date => {
 }
 
 const mapImageToAttachment = (image: TumblrMessage['images'][0]): Attachment => {
-  if (image.originalSize) {
-    const img = image.originalSize
-    return {
-      id: img.url,
-      type: AttachmentType.IMG,
-      size: {
-        width: img.width,
-        height: img.height,
-      },
-      mimeType: img.type,
-      isGif: img.type === 'image/gif',
-      srcURL: img.url,
-    }
+  if (!image.originalSize) return
+  const img = image.originalSize
+  return {
+    id: img.url,
+    type: AttachmentType.IMG,
+    size: {
+      width: img.width,
+      height: img.height,
+    },
+    mimeType: img.type,
+    isGif: img.type === 'image/gif',
+    srcURL: img.url,
   }
 }
 
@@ -108,6 +107,7 @@ interface MapPostToMessageReturns {
   links: MessageLink[]
   textHeading: string
 }
+
 const mapPostToMessage = (message: TumblrMessage): MapPostToMessageReturns => {
   const result: MapPostToMessageReturns = {
     attachments: [],
