@@ -30,7 +30,9 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
   // Temporarily keeping an empty dispose() method to prevent errors while under development.
   // eslint-disable-next-line class-methods-use-this
-  dispose = async () => {}
+  dispose = async () => {
+    this.network.dispose()
+  }
 
   subscribeToEvents = (onEvent: OnServerEventCallback) => {
     this.network.eventCallback = onEvent

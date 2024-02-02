@@ -1,4 +1,5 @@
 import { FetchResponse } from '@textshq/platform-sdk'
+import ConversationChannel from './network-api/ConversationChannel'
 
 export interface AuthCredentials {
   /**
@@ -196,4 +197,13 @@ export type ImageAsVideo = Image & {
 interface MessageImage {
   altSizes: Image[]
   originalSize: Image
+}
+
+export interface ConversationChannelConnecting {
+  connected: false
+}
+
+export interface ConversationChannelConnected {
+  channel: ConversationChannel
+  connected: true
 }

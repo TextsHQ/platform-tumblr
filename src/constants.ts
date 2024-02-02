@@ -15,6 +15,24 @@ export const REQUEST_HEADERS = {
 }
 
 /**
+ * The headers that we include for websocket channels
+ * that listen to conversations.
+ */
+export const CHANNEL_HEADERS = {
+  'User-Agent': texts.constants.USER_AGENT,
+  Accept: '*/*',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Accept-Language': 'en-US,en;q=0.5',
+  'Cache-Control': 'no-cache',
+  DNT: '1',
+  Origin: 'https://www.tumblr.com',
+  Pragma: 'no-cache',
+  'Sec-Fetch-Dest': 'empty',
+  'Sec-Fetch-Mode': 'websocket',
+  'Sec-Fetch-Site': 'same-site',
+}
+
+/**
  * The default, untitled blog name.
  */
 export const UNTITLED_BLOG = 'Untitled'
@@ -46,4 +64,16 @@ export const API_URLS = {
    */
   MESSAGES: `${API_URL}/conversations/messages`,
 
+}
+
+/**
+ * Conversation channel event names.
+ */
+export const CHANNEL_EVENTS = {
+  CONNECTION_ESTABLISHED: 'pusher:connection_established',
+  SUBSCRIBE: 'pusher:subscribe',
+  SUBSCRIPTION_SUCCEEDED: 'pusher_internal:subscription_succeeded',
+  PING: 'pusher:ping',
+  PONG: 'pusher:pong',
+  NEW_MESSAGE: 'message:new',
 }
