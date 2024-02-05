@@ -1,5 +1,6 @@
 import {
   FetchOptions,
+  Message,
   OnServerEventCallback,
   PaginationArg,
   ServerEvent,
@@ -12,6 +13,7 @@ import {
   API_URLS,
   REQUEST_HEADERS,
   CHANNEL_HEADERS,
+  CHANNEL_EVENTS,
 } from '../constants'
 import {
   AnyJSON,
@@ -22,13 +24,10 @@ import {
   AuthCredentialsWithExpiration,
   Conversation,
   ApiLinks,
-  ConversationStatus,
-  Blog,
-  MessagesObject,
-  ConversationChannelConnected,
-  ConversationChannelConnecting,
+  SentMessage,
+  MessagesResponse,
 } from '../types'
-import ConversationChannel from './ConversationChannel'
+import ConversationsChannel from './ConversationsChannel'
 
 /**
  * Strips out the api version path, because we use /v2/ by default.
@@ -40,7 +39,10 @@ export class TumblrClient {
 
   private httpClient = texts.createHttpClient()
 
-  private channels: Record<string, ConversationChannelConnecting | ConversationChannelConnected> = {}
+  private conversationsChannel: {
+    connection: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED'
+    channel?: ConversationsChannel
+  } = { connection: 'DISCONNECTED' }
 
   pendingEventsQueue: ServerEvent[] = []
 
@@ -160,23 +162,10 @@ export class TumblrClient {
     if (pagination) {
       url = `${url}&${pagination.direction}=${pagination.cursor}`
     }
-    const response = await this.fetch<{
-      objectType: string
-      id: string
-      status: ConversationStatus
-      lastModifiedTs: number
-      lastReadTs: number
-      canSend: boolean
-      unreadMesssagesCount: number
-      isPossibleSpam: boolean
-      isBlurredImages: boolean
-      participants: Blog[]
-      messages: MessagesObject
-      token: string
-    }>(url)
+    const response = await this.fetch<MessagesResponse>(url)
 
-    // Initiate the websocket connection for the current conversation
-    this.openChannel(conversationId, blogName, response.json.response.token)
+    this.openChannel(response.json.response.token)
+    this.conversationsChannel.channel?.listenToConversation(conversationId, blogName)
 
     return {
       ...response,
@@ -184,64 +173,91 @@ export class TumblrClient {
     }
   }
 
-  disposeChannel = (...conversationIds: string[]) => {
-    for (const conversationId of conversationIds) {
-      const conversation = this.channels[conversationId]
-      if (conversation?.connected) {
-        conversation.channel.terminate()
-        delete this.channels[conversationId]
-      }
+  sendMessage = async (body: SentMessage) => {
+    const response = await this.fetch<MessagesResponse>(API_URLS.MESSAGES, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+
+    return {
+      ...response,
+      json: response.json.response,
     }
   }
 
   dispose = () => {
-    this.disposeChannel(...Object.keys(this.channels))
+    this.disposeConversationsChannel()
   }
 
-  openChannel = (conversationId: string, blogName: string, token: string) => {
-    if (this.channels[conversationId]) {
+  disposeConversationsChannel = () => {
+    this.conversationsChannel.channel?.terminate()
+    this.conversationsChannel = { connection: 'DISCONNECTED' }
+  }
+
+  openChannel = (token: string) => {
+    if (this.conversationsChannel.connection !== 'DISCONNECTED') {
       return
     }
-    this.channels[conversationId] = { connected: false }
+    this.conversationsChannel.connection = 'CONNECTING'
     try {
-      const channel = new ConversationChannel(
+      const channel = new ConversationsChannel(
         `wss://telegraph.srvcs.tumblr.com/socket?token=${token}`,
-        conversationId,
-        blogName,
         { headers: CHANNEL_HEADERS },
       )
-      this.channels[conversationId] = { connected: true, channel }
-      this.attachChannelListeners(conversationId, channel)
+      this.conversationsChannel = { connection: 'CONNECTED', channel }
+      this.attachChannelListeners()
     } catch (err) {
-      delete this.channels[conversationId]
-      texts.log(`Failed to establish websocket connection to channel: ${conversationId}`)
+      this.conversationsChannel.connection = 'DISCONNECTED'
+      texts.log('Failed to establish websocket connection to conversations channel')
     }
   }
 
-  attachChannelListeners = (conversationId: string, channel: ConversationChannel) => {
-    channel.on('open', this.onChannelOpen(conversationId))
-    channel.on('close', this.onChannelClose(conversationId))
-    channel.on('error', this.onChannelError(conversationId))
-    channel.on('message', this.onChannelMessage(conversationId))
+  attachChannelListeners = () => {
+    this.conversationsChannel.channel.on('open', this.onChannelOpen)
+    this.conversationsChannel.channel.on('close', this.onChannelClose)
+    this.conversationsChannel.channel.on('error', this.onChannelError)
+    this.conversationsChannel.channel.on('message', this.onChannelMessage)
   }
 
   // eslint-disable-next-line class-methods-use-this
-  onChannelOpen = (conversationId: string) => (event: Event) => {
-    console.log(`tumblr.channel(${conversationId}).open.event`, event)
+  onChannelOpen = () => {
+    console.log('🟢 tumblr.channel.open.event')
   }
 
-  onChannelClose = (conversationId: string) => (event: CloseEvent) => {
-    this.disposeChannel(conversationId)
-    console.log(`tumblr.channel(${conversationId}).close.event`, event)
+  onChannelClose = () => {
+    this.disposeConversationsChannel()
+    console.log('🟡 tumblr.channel.close.event')
   }
 
-  onChannelError = (conversationId: string) => (event: Event) => {
-    this.disposeChannel(conversationId)
-    console.log(`tumblr.channel(${conversationId}).error.event`, event)
+  onChannelError = () => {
+    this.disposeConversationsChannel()
+    console.log('🔴 tumblr.channel.error.event')
   }
 
   // eslint-disable-next-line class-methods-use-this
-  onChannelMessage = (conversationId: string) => (event: MessageEvent) => {
-    console.log(`tumblr.channel(${conversationId}).message.event`, event)
+  onChannelMessage = (buffer: Buffer) => {
+    try {
+      const messageEvent: {
+        event: string
+        data: string
+        channel: string
+      } = JSON.parse(`${buffer}`)
+      if (messageEvent.event !== CHANNEL_EVENTS.NEW_MESSAGE) {
+        return
+      }
+      const { conversationId } = ConversationsChannel.parseConversationChannelString(messageEvent.channel)
+      const message = JSON.parse(messageEvent.data)
+      this.eventCallback([{
+        type: ServerEventType.STATE_SYNC,
+        objectIDs: {
+          threadID: conversationId,
+        },
+        objectName: 'message',
+        mutationType: 'upsert',
+        entries: [message],
+      }])
+    } catch (err) {
+      texts.error('Was not able to process the incoming message', err)
+    }
   }
 }

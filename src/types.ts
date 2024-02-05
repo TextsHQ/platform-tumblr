@@ -1,5 +1,4 @@
 import { FetchResponse } from '@textshq/platform-sdk'
-import ConversationChannel from './network-api/ConversationChannel'
 
 export interface AuthCredentials {
   /**
@@ -115,8 +114,10 @@ export interface ApiLinks {
   prev?: ApiLink
 }
 
+export type MessageType = 'TEXT' | 'IMAGE' | 'STICKER' | 'POSTREF'
+
 export interface Message {
-  type: 'TEXT' | 'IMAGE' | 'STICKER' | 'POSTREF'
+  type: MessageType
   participant: string // matches to Blog.uuid
   ts: string
   unread?: boolean
@@ -131,6 +132,15 @@ export interface Message {
   couldNotSend?: boolean
   stickerId?: string
 }
+
+interface SentMessageText {
+  type: 'TEXT'
+  conversation_id: string
+  message: string
+  participant: string
+}
+
+export type SentMessage = SentMessageText
 
 export type GIFPost = Post & {
   type: 'image'
@@ -199,11 +209,17 @@ interface MessageImage {
   originalSize: Image
 }
 
-export interface ConversationChannelConnecting {
-  connected: false
-}
-
-export interface ConversationChannelConnected {
-  channel: ConversationChannel
-  connected: true
+export interface MessagesResponse {
+  objectType: string
+  id: string
+  status: ConversationStatus
+  lastModifiedTs: number
+  lastReadTs: number
+  canSend: boolean
+  unreadMesssagesCount: number
+  isPossibleSpam: boolean
+  isBlurredImages: boolean
+  participants: Blog[]
+  messages: MessagesObject
+  token: string
 }
