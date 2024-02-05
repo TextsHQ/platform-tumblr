@@ -74,6 +74,7 @@ export class TumblrClient {
 
     try {
       const response = await this.httpClient.requestAsString(OAUTH_TOKEN_REFRESH_URL, {
+        method: 'POST',
         headers: REQUEST_HEADERS,
         body: JSON.stringify({
           refresh_token: this.authCreds.refresh_token,
