@@ -133,14 +133,14 @@ export interface Message {
   stickerId?: string
 }
 
-interface SentMessageText {
+interface OutgoingMessageText {
   type: 'TEXT'
   conversation_id: string
   message: string
   participant: string
 }
 
-export type SentMessage = SentMessageText
+export type OutgoingMessage = OutgoingMessageText
 
 export type GIFPost = Post & {
   type: 'image'

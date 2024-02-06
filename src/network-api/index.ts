@@ -23,7 +23,7 @@ import {
   AuthCredentialsWithExpiration,
   Conversation,
   ApiLinks,
-  SentMessage,
+  OutgoingMessage,
   MessagesResponse,
 } from '../types'
 import ConversationsChannel from './conversation-channel'
@@ -173,7 +173,7 @@ export class TumblrClient {
     }
   }
 
-  sendMessage = async (body: SentMessage) => {
+  sendMessage = async (body: OutgoingMessage) => {
     const response = await this.fetch<MessagesResponse>(API_URLS.MESSAGES, {
       method: 'POST',
       body: JSON.stringify(body),
@@ -226,7 +226,6 @@ export class TumblrClient {
     this.disposeConversationsChannel()
   }
 
-  // eslint-disable-next-line class-methods-use-this
   onChannelMessage = (buffer: Buffer) => {
     try {
       const messageEvent: {

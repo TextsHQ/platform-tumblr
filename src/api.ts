@@ -10,7 +10,7 @@ import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
 import type {
-  AuthCredentialsWithDuration, AuthCredentialsWithExpiration, SentMessage, TumblrUserInfo,
+  AuthCredentialsWithDuration, AuthCredentialsWithExpiration, OutgoingMessage, TumblrUserInfo,
   Message as TumblrMessage,
 } from './types'
 import { mapCurrentUser, mapMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
@@ -37,6 +37,9 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     this.network.dispose()
   }
 
+  /**
+   * Event middleware that maps event data
+   */
   private handleEvent = (onEvent: OnServerEventCallback) => (events: ServerEvent[]) => {
     const mappedEvents = events.map(event => {
       if (event.type === ServerEventType.STATE_SYNC && event.mutationType === 'upsert') {
@@ -151,15 +154,17 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     return mapPaginatedMessages(response.json.messages, this.currentUser.activeBlog)
   }
 
+  /**
+   * @todo
+   *   - Move mapping to mappers.ts
+   *   - Add support for sending attachments
+   */
   sendMessage = async (threadID: ThreadID, content: MessageContent): Promise<boolean | Message[]> => {
     if (!this.currentUser?.activeBlog?.uuid) {
       throw Error('User credentials are absent. Try reauthenticating.')
     }
 
-    /**
-     * @todo Move mapping to mappers.ts
-     */
-    const body: SentMessage = {
+    const body: OutgoingMessage = {
       conversation_id: threadID,
       type: 'TEXT',
       participant: this.currentUser.activeBlog.uuid,
