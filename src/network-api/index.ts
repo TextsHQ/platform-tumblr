@@ -1,6 +1,5 @@
 import {
   FetchOptions,
-  Message,
   OnServerEventCallback,
   PaginationArg,
   ServerEvent,
@@ -27,7 +26,8 @@ import {
   SentMessage,
   MessagesResponse,
 } from '../types'
-import ConversationsChannel from './ConversationsChannel'
+import ConversationsChannel from './conversation-channel'
+import { camelCaseKeys } from './word-case'
 
 /**
  * Strips out the api version path, because we use /v2/ by default.
@@ -213,25 +213,17 @@ export class TumblrClient {
   }
 
   attachChannelListeners = () => {
-    this.conversationsChannel.channel.on('open', this.onChannelOpen)
     this.conversationsChannel.channel.on('close', this.onChannelClose)
     this.conversationsChannel.channel.on('error', this.onChannelError)
     this.conversationsChannel.channel.on('message', this.onChannelMessage)
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  onChannelOpen = () => {
-    console.log('🟢 tumblr.channel.open.event')
-  }
-
   onChannelClose = () => {
     this.disposeConversationsChannel()
-    console.log('🟡 tumblr.channel.close.event')
   }
 
   onChannelError = () => {
     this.disposeConversationsChannel()
-    console.log('🔴 tumblr.channel.error.event')
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -254,7 +246,7 @@ export class TumblrClient {
         },
         objectName: 'message',
         mutationType: 'upsert',
-        entries: [message],
+        entries: [camelCaseKeys(message)],
       }])
     } catch (err) {
       texts.error('Was not able to process the incoming message', err)
