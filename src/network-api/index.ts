@@ -26,9 +26,12 @@ import {
   ApiLinks,
   OutgoingMessage,
   MessagesResponse,
+  UnreadCountsResponse,
+  Message,
 } from '../types'
 import ConversationsChannel from './conversation-channel'
 import { camelCaseKeys } from './word-case'
+import { mapMessage } from '../mappers'
 
 /**
  * Strips out the api version path, because we use /v2/ by default.
@@ -36,6 +39,8 @@ import { camelCaseKeys } from './word-case'
 const stripApiVersion = (path: string): string => path.replace(/^\/v2/, '')
 
 export class TumblrClient {
+  currentUser: TumblrUserInfo = null
+
   private authCreds: AuthCredentialsWithExpiration
 
   private httpClient = texts.createHttpClient()
@@ -45,7 +50,15 @@ export class TumblrClient {
     channel?: ConversationsChannel
   } = { connection: 'DISCONNECTED' }
 
+  private unreadCountsPollingInterval = 10_000
+
+  private unreadCountsPollingTimoutId: ReturnType<typeof setTimeout>
+
   pendingEventsQueue: ServerEvent[] = []
+
+  constructor() {
+    this.pollUnreadCounts()
+  }
 
   eventCallback: OnServerEventCallback = (events: ServerEvent[]) => {
     this.pendingEventsQueue.push(...events)
@@ -72,7 +85,7 @@ export class TumblrClient {
    * Makes sure the access token is up to date. In case if access token
    * is expired it updates it with a new one.
    */
-  ensureUpdatedCreds = async () => {
+  private ensureUpdatedCreds = async () => {
     if (!this.authCreds) {
       throw new Error('Tumblr not logged in')
     }
@@ -123,12 +136,27 @@ export class TumblrClient {
   /**
    * Fetches the current user info.
    */
-  getCurrentUser = async () => {
-    const response = await this.fetch<{ user: Omit<TumblrUserInfo, 'activeBlog'> }>(API_URLS.USER_INFO)
-    return {
-      ...response,
-      json: response.json.response,
+  getCurrentUser = async (): Promise<TumblrUserInfo> => {
+    if (this.currentUser) {
+      return this.currentUser
     }
+
+    const response = await this.fetch<{ user: Omit<TumblrUserInfo, 'activeBlog'> }>(API_URLS.USER_INFO)
+    const { user } = response.json.response
+    const primaryBlog = user.blogs.find(({ primary }) => primary)
+
+    // This should never happen. But if it happens we want to know
+    // right away.
+    if (!primaryBlog) {
+      throw Error("Unable to detect user's primary blog")
+    }
+
+    this.currentUser = {
+      ...user,
+      activeBlog: primaryBlog,
+    }
+
+    return this.currentUser
   }
 
   /**
@@ -154,14 +182,19 @@ export class TumblrClient {
     conversationId,
     blogName,
     pagination,
+    limit,
   }: {
     conversationId: string
     blogName: string
     pagination?: PaginationArg
+    limit?: number
   }) => {
     let url = `${API_URLS.MESSAGES}?participant=${blogName}.tumblr.com&conversation_id=${conversationId}`
     if (pagination) {
       url = `${url}&${pagination.direction}=${pagination.cursor}`
+    }
+    if (limit) {
+      url = `${url}&limit=${limit}`
     }
     const response = await this.fetch<MessagesResponse>(url)
 
@@ -200,6 +233,9 @@ export class TumblrClient {
 
   dispose = () => {
     this.disposeConversationsChannel()
+    if (this.unreadCountsPollingTimoutId) {
+      clearTimeout(this.unreadCountsPollingTimoutId)
+    }
   }
 
   disposeConversationsChannel = () => {
@@ -239,7 +275,7 @@ export class TumblrClient {
     this.disposeConversationsChannel()
   }
 
-  onChannelMessage = (buffer: Buffer) => {
+  onChannelMessage = async (buffer: Buffer) => {
     try {
       const messageEvent: {
         event: string
@@ -250,7 +286,9 @@ export class TumblrClient {
         return
       }
       const { conversationId } = ConversationsChannel.parseConversationChannelString(messageEvent.channel)
-      const message = JSON.parse(messageEvent.data)
+      const message = JSON.parse(messageEvent.data) as Message
+      const currentUser = await this.getCurrentUser()
+
       this.eventCallback([{
         type: ServerEventType.STATE_SYNC,
         objectIDs: {
@@ -258,10 +296,74 @@ export class TumblrClient {
         },
         objectName: 'message',
         mutationType: 'upsert',
-        entries: [camelCaseKeys(message)],
+        entries: [mapMessage(camelCaseKeys(message), currentUser.activeBlog)],
       }])
     } catch (err) {
       texts.error('Was not able to process the incoming message', err)
+    }
+  }
+
+  getUnreadCounts = async () => {
+    const response = await this.fetch(API_URLS.UNREAD_COUNTS)
+    return camelCaseKeys(response.json) as unknown as UnreadCountsResponse
+  }
+
+  setUnreadCountsPollingInterval = (interval: number) => {
+    // Prevent unwanted polling intervals
+    if (Number.isNaN(interval) || interval < 1000) {
+      return
+    }
+    this.unreadCountsPollingInterval = interval
+  }
+
+  private pollUnreadCounts = async () => {
+    if (this.unreadCountsPollingTimoutId) {
+      clearTimeout(this.unreadCountsPollingTimoutId)
+    }
+
+    try {
+      await this.checkUnreadCounts()
+    } finally {
+      this.unreadCountsPollingTimoutId = setTimeout(() => {
+        this.pollUnreadCounts()
+      }, this.unreadCountsPollingInterval)
+    }
+  }
+
+  private getUnreadMessages = async (conversationId, unreadCount) => {
+    console.log('conversationId', conversationId, 'unreadCount', unreadCount)
+    const currentUser = await this.getCurrentUser()
+    const response = this.getMessages({
+      conversationId,
+      limit: unreadCount,
+      blogName: currentUser.activeBlog.name,
+    })
+
+    this.eventCallback([{
+      type: ServerEventType.STATE_SYNC,
+      objectIDs: {
+        threadID: conversationId,
+      },
+      objectName: 'message',
+      mutationType: 'upsert',
+      entries: (await response).json.messages.data.map(message => mapMessage(message, currentUser.activeBlog)),
+    }])
+  }
+
+  private checkUnreadCounts = async () => {
+    if (!this.authCreds) {
+      return
+    }
+
+    const { unreadMessages } = await this.getUnreadCounts()
+
+    const conversations = Object.values(unreadMessages)
+    for (const conversation of conversations) {
+      const conversationId = Object.keys(conversation)[0]
+      const unreadCount = conversation[conversationId]
+      if (conversationId && unreadCount > 0) {
+        this.getUnreadMessages(conversationId, unreadCount)
+      }
     }
   }
 }
