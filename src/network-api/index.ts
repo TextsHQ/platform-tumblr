@@ -1,3 +1,4 @@
+import FormData from 'form-data'
 import {
   FetchOptions,
   OnServerEventCallback,
@@ -174,10 +175,22 @@ export class TumblrClient {
   }
 
   sendMessage = async (body: OutgoingMessage) => {
-    const response = await this.fetch<MessagesResponse>(API_URLS.MESSAGES, {
+    const options: FetchOptions = {
       method: 'POST',
-      body: JSON.stringify(body),
-    })
+    }
+    if (body.type === 'IMAGE') {
+      const form = new FormData()
+      form.append('type', 'IMAGE')
+      form.append('participant', body.participant)
+      form.append('conversation_id', body.conversationId)
+      form.append('data', body.data, { filename: body.filename })
+      options.body = form
+      options.headers = form.getHeaders()
+    } else {
+      options.body = JSON.stringify(body)
+    }
+
+    const response = await this.fetch<MessagesResponse>(API_URLS.MESSAGES, options)
 
     return {
       ...response,
