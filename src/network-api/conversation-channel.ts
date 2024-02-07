@@ -10,22 +10,42 @@ export default class ConversationsChannel extends WS {
 
   private pingTimeoutId: ReturnType<typeof setTimeout>
 
+  private subscriptions: string[] = []
+
   constructor(
     address: string,
     options: WS.ClientOptions,
   ) {
     super(address, options)
     this.on('message', this.onConnectionEstablished)
+    this.on('message', this.onSubscriptionSucceeded)
     this.on('message', this.ping)
   }
 
   listenToConversation(conversationId: string, blogName: string) {
-    const message = JSON.stringify({ event: 'pusher:subscribe', data: { auth: '', channel: `private-messaging-${conversationId}-${blogName}.tumblr.com` } })
+    const channel = `private-messaging-${conversationId}-${blogName}.tumblr.com`
+    if (this.subscriptions.includes(channel)) {
+      return
+    }
+    const message = JSON.stringify({ event: CHANNEL_EVENTS.SUBSCRIBE, data: { auth: '', channel } })
     if (this.readyState === WS.OPEN) {
       this.send(message)
     } else {
       this.on('open', () => this.send(message))
     }
+  }
+
+  onSubscriptionSucceeded(buffer: Buffer) {
+    const message = JSON.parse(`${buffer}`)
+    if (message?.event !== CHANNEL_EVENTS.SUBSCRIPTION_SUCCEEDED) {
+      return
+    }
+
+    if (!message.channel) {
+      return
+    }
+
+    this.subscriptions.push(message.channel)
   }
 
   onConnectionEstablished(buffer: Buffer) {
