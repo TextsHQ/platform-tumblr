@@ -1,5 +1,7 @@
-import { Attachment, AttachmentType, CurrentUser, Message, MessageLink, Paginated, Participant, Thread, UserSocialAttributes } from '@textshq/platform-sdk'
-import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, Blog, ApiLinks } from './types'
+import path from 'path'
+import * as fs from 'fs/promises'
+import { Attachment, AttachmentType, CurrentUser, Message, MessageContent, MessageLink, Paginated, Participant, Thread, UserSocialAttributes } from '@textshq/platform-sdk'
+import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, Blog, ApiLinks, OutgoingMessage } from './types'
 import { UNTITLED_BLOG } from './constants'
 
 const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => {
@@ -228,3 +230,31 @@ export const mapPaginatedThreads = ({
   hasMore: !!links?.next?.href || !!links?.prev?.href,
   oldestCursor: links?.next?.href || links?.prev?.href,
 })
+
+export const mapMessageContentToOutgoingMessage = async (conversationId: string, blog: Blog, content: MessageContent): Promise<OutgoingMessage> => {
+  if (content.filePath || content.fileBuffer) {
+    let data: File | Buffer
+    let filename = ''
+    if (content.fileBuffer) {
+      filename = content.fileName
+      data = content.fileBuffer
+    } else if (content.filePath) {
+      filename = content.fileName || path.basename(content.filePath)
+      data = await fs.readFile(content.filePath)
+    }
+    return {
+      type: 'IMAGE',
+      conversationId,
+      participant: blog.uuid,
+      data,
+      filename,
+    }
+  }
+
+  return {
+    conversation_id: conversationId,
+    type: 'TEXT',
+    participant: blog.uuid,
+    message: content.text,
+  }
+}

@@ -13,7 +13,7 @@ import type {
   AuthCredentialsWithDuration, AuthCredentialsWithExpiration, OutgoingMessage, TumblrUserInfo,
   Message as TumblrMessage,
 } from './types'
-import { mapCurrentUser, mapMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
+import { mapCurrentUser, mapMessage, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
@@ -164,13 +164,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
       throw Error('User credentials are absent. Try reauthenticating.')
     }
 
-    const body: OutgoingMessage = {
-      conversation_id: threadID,
-      type: 'TEXT',
-      participant: this.currentUser.activeBlog.uuid,
-      message: content.text,
-    }
-
+    const body = await mapMessageContentToOutgoingMessage(threadID, this.currentUser.activeBlog, content)
     const response = await this.network.sendMessage(body)
     return response.json.messages.data.map(message => mapMessage(message, this.currentUser.activeBlog))
   }
