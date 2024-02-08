@@ -154,11 +154,6 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     return mapPaginatedMessages(response.json.messages, this.currentUser.activeBlog)
   }
 
-  /**
-   * @todo
-   *   - Move mapping to mappers.ts
-   *   - Add support for sending attachments
-   */
   sendMessage = async (threadID: ThreadID, content: MessageContent): Promise<boolean | Message[]> => {
     if (!this.currentUser?.activeBlog?.uuid) {
       throw new ReAuthError('User credentials are absent. Try reauthenticating.')
