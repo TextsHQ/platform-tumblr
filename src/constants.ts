@@ -64,6 +64,7 @@ export const API_URLS = {
    */
   MESSAGES: `${API_URL}/conversations/messages`,
 
+  UNREAD_COUNTS: `${API_URL}/user/counts?unread=true&unread_messages=true`,
 }
 
 /**

@@ -1,4 +1,4 @@
-import { PlatformInfo, MessageDeletionMode } from '@textshq/platform-sdk'
+import { PlatformInfo, MessageDeletionMode, Attribute } from '@textshq/platform-sdk'
 
 const info: PlatformInfo = {
   name: 'Tumblr',
@@ -13,6 +13,15 @@ const info: PlatformInfo = {
 </svg>`,
   deletionMode: MessageDeletionMode.UNSUPPORTED,
   attributes: new Set([
+    Attribute.CANNOT_MESSAGE_SELF,
+    Attribute.NO_SUPPORT_DUPLICATE_GROUP_CREATION,
+    Attribute.NO_SUPPORT_GROUP_ADD_PARTICIPANT,
+    Attribute.NO_SUPPORT_GROUP_REMOVE_PARTICIPANT,
+    Attribute.NO_SUPPORT_GROUP_THREAD_CREATION,
+    Attribute.NO_SUPPORT_TYPING_INDICATOR,
+    Attribute.NO_SUPPORT_GROUP_TITLE_CHANGE,
+    Attribute.NO_SUPPORT_GROUP_REMOVE_PARTICIPANT,
+    Attribute.SUBSCRIBE_TO_THREAD_SELECTION,
   ]),
   loginMode: 'browser',
   browserLogins: [

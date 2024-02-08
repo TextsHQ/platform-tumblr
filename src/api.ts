@@ -4,21 +4,16 @@ import {
   OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap,
   SearchMessageOptions, Thread, User, OnLoginEventCallback, ThreadFolderName,
   ThreadID, StickerPack, StickerPackID, Attachment, MessageID, UserID, PhoneNumber, AttachmentID,
-  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, ServerEvent, ServerEventType, ReAuthError, PaginatedWithCursors,
+  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, PaginatedWithCursors,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
-import type {
-  AuthCredentialsWithDuration, AuthCredentialsWithExpiration, TumblrUserInfo,
-  Message as TumblrMessage,
-} from './types'
+import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration } from './types'
 import { mapCurrentUser, mapMessage, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
-
-  currentUser: TumblrUserInfo = null
 
   /**
    * Called after new PlatformAPI()
@@ -27,38 +22,22 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   init = (session: { creds?: AuthCredentialsWithExpiration }) => {
     if (session?.creds) {
       this.network.setAuthCreds(session.creds)
+      this.network.pollUnreadCounts()
     }
   }
 
-  /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
-  // Temporarily keeping an empty dispose() method to prevent errors while under development.
-  // eslint-disable-next-line class-methods-use-this
+  /**
+   * `dispose` disconnects all network connections and cleans up.
+   * Called when user disables account and when app exits.
+   */
   dispose = async () => {
     this.network.dispose()
   }
 
-  /**
-   * Event middleware that maps event data
-   */
-  private handleEvent = (onEvent: OnServerEventCallback) => (events: ServerEvent[]) => {
-    const mappedEvents = events.map(event => {
-      if (event.type === ServerEventType.STATE_SYNC && event.mutationType === 'upsert') {
-        return {
-          ...event,
-          entries: event.entries.map(message => mapMessage(message as unknown as TumblrMessage, this.currentUser.activeBlog)),
-        }
-      }
-
-      return event
-    })
-    onEvent(mappedEvents)
-  }
-
   subscribeToEvents = (onEvent: OnServerEventCallback) => {
-    const handleEvent = this.handleEvent(onEvent)
-    this.network.eventCallback = handleEvent
+    this.network.eventCallback = onEvent
     if (this.network.pendingEventsQueue.length > 0) {
-      handleEvent(this.network.pendingEventsQueue)
+      onEvent(this.network.pendingEventsQueue)
       this.network.pendingEventsQueue = []
     }
   }
@@ -70,25 +49,8 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   ) => Awaitable<void>
 
   getCurrentUser = async (): Promise<CurrentUser> => {
-    if (this.currentUser) {
-      return mapCurrentUser(this.currentUser)
-    }
-
-    const { json: { user } } = await this.network.getCurrentUser()
-    const primaryBlog = user.blogs.find(({ primary }) => primary)
-
-    // This should never happen. But if it happens we want to know
-    // right away.
-    if (!primaryBlog) {
-      throw Error("Unable to detect user's primary blog")
-    }
-
-    this.currentUser = {
-      ...user,
-      activeBlog: primaryBlog,
-    }
-
-    return mapCurrentUser(this.currentUser)
+    const currentUser = await this.network.getCurrentUser()
+    return mapCurrentUser(currentUser)
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
@@ -140,28 +102,31 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getThreads = async (folderName: ThreadFolderName, pagination?: PaginationArg): Promise<PaginatedWithCursors<Thread>> => {
     const response = await this.network.getConversations(pagination)
+    const currentUser = await this.network.getCurrentUser()
     const { conversations, links } = response.json
-    return mapPaginatedThreads({ conversations, links, currentUser: this.currentUser })
+    return mapPaginatedThreads({ conversations, links, currentUser })
   }
 
   /** Messages should be sorted by timestamp asc → desc */
   getMessages = async (threadID: ThreadID, pagination?: PaginationArg): Promise<Paginated<Message>> => {
+    const currentUser = await this.network.getCurrentUser()
     const response = await this.network.getMessages({
       conversationId: threadID,
-      blogName: this.currentUser.activeBlog.name,
+      blogName: currentUser.activeBlog.name,
       pagination,
     })
-    return mapPaginatedMessages(response.json.messages, this.currentUser.activeBlog)
+    return mapPaginatedMessages(response.json.messages, currentUser.activeBlog)
   }
 
   sendMessage = async (threadID: ThreadID, content: MessageContent): Promise<boolean | Message[]> => {
-    if (!this.currentUser?.activeBlog?.uuid) {
-      throw new ReAuthError('User credentials are absent. Try reauthenticating.')
+    const currentUser = await this.network.getCurrentUser()
+    if (!currentUser?.activeBlog?.uuid) {
+      throw Error('User credentials are absent. Try reauthenticating.')
     }
 
-    const body = await mapMessageContentToOutgoingMessage(threadID, this.currentUser.activeBlog, content)
+    const body = await mapMessageContentToOutgoingMessage(threadID, currentUser.activeBlog, content)
     const response = await this.network.sendMessage(body)
-    return response.json.messages.data.map(message => mapMessage(message, this.currentUser.activeBlog))
+    return response.json.messages.data.map(message => mapMessage(message, currentUser.activeBlog))
   }
 
   getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<PaginatedWithCursors<Participant>>
@@ -219,7 +184,9 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   /** called by the client when an attachment (video/audio/image) is marked as played by user */
   markAttachmentPlayed?: (attachmentID: AttachmentID, messageID?: MessageID) => Awaitable<void>
 
-  onThreadSelected?: (threadID: ThreadID) => Awaitable<void>
+  onThreadSelected = async (threadID: ThreadID) => {
+    this.network.setUnreadCountsPollingInterval(threadID ? 5000 : 10_000)
+  }
 
   loadDynamicMessage?: (message: Message) => Awaitable<Partial<Message>>
 

@@ -231,3 +231,11 @@ export interface MessagesResponse {
   messages: MessagesObject
   token: string
 }
+
+export interface UnreadCountsResponse {
+  unreadMessages: {
+    [key: string]: {
+      [conversationId: string]: number
+    }
+  }
+}
