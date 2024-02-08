@@ -4,7 +4,7 @@ import {
   OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap,
   SearchMessageOptions, Thread, User, OnLoginEventCallback, ThreadFolderName,
   ThreadID, StickerPack, StickerPackID, Attachment, MessageID, UserID, PhoneNumber, AttachmentID,
-  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, ServerEvent, ServerEventType,
+  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, ServerEvent, ServerEventType, ReAuthError,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
 
@@ -161,7 +161,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
    */
   sendMessage = async (threadID: ThreadID, content: MessageContent): Promise<boolean | Message[]> => {
     if (!this.currentUser?.activeBlog?.uuid) {
-      throw Error('User credentials are absent. Try reauthenticating.')
+      throw new ReAuthError('User credentials are absent. Try reauthenticating.')
     }
 
     const body: OutgoingMessage = {
