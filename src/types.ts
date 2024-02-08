@@ -140,7 +140,15 @@ interface OutgoingMessageText {
   participant: string
 }
 
-export type OutgoingMessage = OutgoingMessageText
+interface OutgoingMessageImage {
+  type: 'IMAGE'
+  participant: string
+  conversationId: string
+  data: File | Buffer
+  filename: string
+}
+
+export type OutgoingMessage = OutgoingMessageText | OutgoingMessageImage
 
 export type GIFPost = Post & {
   type: 'image'
