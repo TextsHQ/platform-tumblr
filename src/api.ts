@@ -10,7 +10,7 @@ import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
 import type {
-  AuthCredentialsWithDuration, AuthCredentialsWithExpiration, OutgoingMessage, TumblrUserInfo,
+  AuthCredentialsWithDuration, AuthCredentialsWithExpiration, TumblrUserInfo,
   Message as TumblrMessage,
 } from './types'
 import { mapCurrentUser, mapMessage, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
