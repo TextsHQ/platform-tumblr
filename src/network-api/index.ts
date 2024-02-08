@@ -313,7 +313,6 @@ export class TumblrClient {
   }
 
   private getUnreadMessages = async (conversationId, unreadCount) => {
-    console.log('conversationId', conversationId, 'unreadCount', unreadCount)
     const currentUser = await this.getCurrentUser()
     const response = this.getMessages({
       conversationId,
