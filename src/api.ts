@@ -117,11 +117,6 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     return mapPaginatedMessages(response.json.messages, currentUser.activeBlog)
   }
 
-  /**
-   * @todo
-   *   - Move mapping to mappers.ts
-   *   - Add support for sending attachments
-   */
   sendMessage = async (threadID: ThreadID, content: MessageContent): Promise<boolean | Message[]> => {
     const currentUser = await this.network.getCurrentUser()
     if (!currentUser?.activeBlog?.uuid) {
