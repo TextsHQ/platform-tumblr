@@ -7,6 +7,7 @@ import {
   ServerEventType,
   texts,
 } from '@textshq/platform-sdk'
+import { WebSocketClientOptions } from '@textshq/platform-sdk/dist/PersistentWS'
 import {
   ACCESS_TOKEN_MIN_TTL,
   OAUTH_TOKEN_REFRESH_URL,
@@ -41,9 +42,9 @@ export class TumblrClient {
   private httpClient = texts.createHttpClient()
 
   private conversationsChannel: {
-    connection: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED'
+    token?: string
     channel?: ConversationsChannel
-  } = { connection: 'DISCONNECTED' }
+  } = {}
 
   pendingEventsQueue: ServerEvent[] = []
 
@@ -165,8 +166,7 @@ export class TumblrClient {
     }
     const response = await this.fetch<MessagesResponse>(url)
 
-    this.openChannel(response.json.response.token)
-    this.conversationsChannel.channel?.listenToConversation(conversationId, blogName)
+    this.subscribeToMessages(response.json.response.token, conversationId, blogName)
 
     return {
       ...response,
@@ -203,40 +203,26 @@ export class TumblrClient {
   }
 
   disposeConversationsChannel = () => {
-    this.conversationsChannel.channel?.terminate()
-    this.conversationsChannel = { connection: 'DISCONNECTED' }
+    this.conversationsChannel.channel?.dispose()
+    this.conversationsChannel = {}
   }
 
-  openChannel = (token: string) => {
-    if (this.conversationsChannel.connection !== 'DISCONNECTED') {
-      return
-    }
-    this.conversationsChannel.connection = 'CONNECTING'
-    try {
-      const channel = new ConversationsChannel(
-        `wss://telegraph.srvcs.tumblr.com/socket?token=${token}`,
-        { headers: CHANNEL_HEADERS },
+  getConnectionInfo = async (): Promise<{ endpoint: string, options?: WebSocketClientOptions }> => ({
+    endpoint: `wss://telegraph.srvcs.tumblr.com/socket?token=${this.conversationsChannel.token}`,
+    options: { headers: CHANNEL_HEADERS },
+  })
+
+  subscribeToMessages = async (token: string, conversationId: string, blogName: string) => {
+    if (!this.conversationsChannel.token) {
+      this.conversationsChannel.token = token
+      this.conversationsChannel.channel = new ConversationsChannel(
+        this.getConnectionInfo,
+        this.onChannelMessage,
       )
-      this.conversationsChannel = { connection: 'CONNECTED', channel }
-      this.attachChannelListeners()
-    } catch (err) {
-      this.conversationsChannel.connection = 'DISCONNECTED'
-      texts.log('Failed to establish websocket connection to conversations channel')
+      await this.conversationsChannel.channel.connect()
     }
-  }
 
-  attachChannelListeners = () => {
-    this.conversationsChannel.channel.on('close', this.onChannelClose)
-    this.conversationsChannel.channel.on('error', this.onChannelError)
-    this.conversationsChannel.channel.on('message', this.onChannelMessage)
-  }
-
-  onChannelClose = () => {
-    this.disposeConversationsChannel()
-  }
-
-  onChannelError = () => {
-    this.disposeConversationsChannel()
+    this.conversationsChannel.channel?.subscribeToMessages(conversationId, blogName)
   }
 
   onChannelMessage = (buffer: Buffer) => {

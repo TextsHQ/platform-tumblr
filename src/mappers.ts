@@ -1,6 +1,9 @@
 import path from 'path'
 import * as fs from 'fs/promises'
-import { Attachment, AttachmentType, CurrentUser, Message, MessageContent, MessageLink, Paginated, Participant, Thread, UserSocialAttributes } from '@textshq/platform-sdk'
+import {
+  Attachment, AttachmentType, CurrentUser, Message, MessageContent, MessageLink,
+  Paginated, PaginatedWithCursors, Participant, Thread, UserSocialAttributes,
+} from '@textshq/platform-sdk'
 import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, Blog, ApiLinks, OutgoingMessage } from './types'
 import { UNTITLED_BLOG } from './constants'
 
@@ -177,7 +180,7 @@ export const mapMessage = (message: TumblrMessage, currentUserBlog: Blog): Messa
   return result
 }
 
-export const mapPaginatedMessages = (messages: TumblrMessages, blog: Blog): Paginated<Message> => ({
+export const mapPaginatedMessages = (messages: TumblrMessages, blog: Blog): PaginatedWithCursors<Message> => ({
   items: messages.data.map(message => mapMessage(message, blog)),
   hasMore: !!messages.data.length,
   oldestCursor: messages.data[0]?.ts,
@@ -225,7 +228,7 @@ export const mapPaginatedThreads = ({
   conversations: Conversation[]
   links?: ApiLinks
   currentUser: TumblrUserInfo
-}): Paginated<Thread> => ({
+}): PaginatedWithCursors<Thread> => ({
   items: conversations.map(conversation => mapThread(conversation, currentUser)),
   hasMore: !!links?.next?.href || !!links?.prev?.href,
   oldestCursor: links?.next?.href || links?.prev?.href,

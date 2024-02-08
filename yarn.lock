@@ -1725,13 +1725,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk#0bde861ffc0960c33be30c7c72660cd7341de2c9":
+"@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk#main":
   version: 0.4.4
-  resolution: "@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk.git#commit=0bde861ffc0960c33be30c7c72660cd7341de2c9"
+  resolution: "@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk.git#commit=23798ca5da9f07c5a1ecc9331f6cffda517a1857"
   dependencies:
     emoji-regex: ^10.1.0
+    lodash: ^4.17.21
     qrcode.react: ^3.1.0
-  checksum: f5c32c7772b39c061e2b65b0f13f7e873d21d9dbd103687e860a2424e7e1728cbd9ab49d48e1986e7219b32edeb389a0a0823521e42e45275c4733874344670a
+    ws: ^8.15.1
+  dependenciesMeta:
+    lodash:
+      optional: true
+    ws:
+      optional: true
+  checksum: eed11505cb045f0ceb357279174d033b26029b2b4c342c6c71200f3c8561bde42860966924c76d915a7fabcc1139484d6b2dea940929866e13afd21b6ab3e4d7
   languageName: node
   linkType: hard
 
@@ -1740,15 +1747,13 @@ __metadata:
   resolution: "@textshq/platform-tumblr@workspace:."
   dependencies:
     "@textshq/eslint-config": "https://github.com/TextsHQ/eslint-config#main"
-    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#0bde861ffc0960c33be30c7c72660cd7341de2c9"
+    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#main"
     "@types/eslint": ^8.21.3
     "@types/node": ^18.15.8
-    "@types/ws": ^8.5.10
     eslint: ^8.36.0
     form-data: ^4.0.0
     react: "https://github.com/TextsHQ/react-global-shim"
     typescript: ^5.0.2
-    ws: ^8.16.0
   languageName: unknown
   linkType: soft
 
@@ -1783,15 +1788,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*":
-  version: 20.11.15
-  resolution: "@types/node@npm:20.11.15"
-  dependencies:
-    undici-types: ~5.26.4
-  checksum: 80fe17561636e6e72a0264c26232ea4c46b5ee700888a703f06ae6c9115a2dadb16ccd09b79aa2c66a07cb547a201b2609ab939b9bde42bdad56eeefd161bc12
-  languageName: node
-  linkType: hard
-
 "@types/node@npm:^18.15.8":
   version: 18.15.8
   resolution: "@types/node@npm:18.15.8"
@@ -1810,15 +1806,6 @@ __metadata:
   version: 7.3.13
   resolution: "@types/semver@npm:7.3.13"
   checksum: 00c0724d54757c2f4bc60b5032fe91cda6410e48689633d5f35ece8a0a66445e3e57fa1d6e07eb780f792e82ac542948ec4d0b76eb3484297b79bd18b8cf1cb0
-  languageName: node
-  linkType: hard
-
-"@types/ws@npm:^8.5.10":
-  version: 8.5.10
-  resolution: "@types/ws@npm:8.5.10"
-  dependencies:
-    "@types/node": "*"
-  checksum: 3ec416ea2be24042ebd677932a462cf16d2080393d8d7d0b1b3f5d6eaa4a7387aaf0eefb99193c0bfd29444857cf2e0c3ac89899e130550dc6c14ada8a46d25e
   languageName: node
   linkType: hard
 
@@ -4803,13 +4790,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~5.26.4":
-  version: 5.26.5
-  resolution: "undici-types@npm:5.26.5"
-  checksum: 3192ef6f3fd5df652f2dc1cd782b49d6ff14dc98e5dced492aa8a8c65425227da5da6aafe22523c67f035a272c599bb89cfe803c1db6311e44bed3042fc25487
-  languageName: node
-  linkType: hard
-
 "unicode-canonical-property-names-ecmascript@npm:^2.0.0":
   version: 2.0.0
   resolution: "unicode-canonical-property-names-ecmascript@npm:2.0.0"
@@ -4928,7 +4908,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ws@npm:^8.16.0":
+"ws@npm:^8.15.1":
   version: 8.16.0
   resolution: "ws@npm:8.16.0"
   peerDependencies:
