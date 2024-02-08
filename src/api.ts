@@ -22,6 +22,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   init = (session: { creds?: AuthCredentialsWithExpiration }) => {
     if (session?.creds) {
       this.network.setAuthCreds(session.creds)
+      this.network.pollUnreadCounts()
     }
   }
 

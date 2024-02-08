@@ -57,10 +57,6 @@ export class TumblrClient {
 
   pendingEventsQueue: ServerEvent[] = []
 
-  constructor() {
-    this.pollUnreadCounts()
-  }
-
   eventCallback: OnServerEventCallback = (events: ServerEvent[]) => {
     this.pendingEventsQueue.push(...events)
   }
@@ -302,7 +298,7 @@ export class TumblrClient {
     this.unreadCountsPollingInterval = interval
   }
 
-  private pollUnreadCounts = async () => {
+  pollUnreadCounts = async () => {
     if (this.unreadCountsPollingTimoutId) {
       clearTimeout(this.unreadCountsPollingTimoutId)
     }
