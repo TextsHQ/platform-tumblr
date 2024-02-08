@@ -6,12 +6,15 @@ import {
   ServerEventType,
   texts,
 } from '@textshq/platform-sdk'
+import { WebSocketClientOptions } from '@textshq/platform-sdk/dist/PersistentWS'
 import {
   ACCESS_TOKEN_MIN_TTL,
   OAUTH_TOKEN_REFRESH_URL,
   API_URLS,
   REQUEST_HEADERS,
-} from './constants'
+  CHANNEL_HEADERS,
+  CHANNEL_EVENTS,
+} from '../constants'
 import {
   AnyJSON,
   TumblrUserInfo,
@@ -21,10 +24,11 @@ import {
   AuthCredentialsWithExpiration,
   Conversation,
   ApiLinks,
-  ConversationStatus,
-  Blog,
-  MessagesObject,
-} from './types'
+  OutgoingMessage,
+  MessagesResponse,
+} from '../types'
+import ConversationsChannel from './conversation-channel'
+import { camelCaseKeys } from './word-case'
 
 /**
  * Strips out the api version path, because we use /v2/ by default.
@@ -35,6 +39,11 @@ export class TumblrClient {
   private authCreds: AuthCredentialsWithExpiration
 
   private httpClient = texts.createHttpClient()
+
+  private conversationsChannel: {
+    token?: string
+    channel?: ConversationsChannel
+  } = {}
 
   pendingEventsQueue: ServerEvent[] = []
 
@@ -154,23 +163,78 @@ export class TumblrClient {
     if (pagination) {
       url = `${url}&${pagination.direction}=${pagination.cursor}`
     }
-    const response = await this.fetch<{
-      objectType: string
-      id: string
-      status: ConversationStatus
-      lastModifiedTs: number
-      lastReadTs: number
-      canSend: boolean
-      unreadMesssagesCount: number
-      isPossibleSpam: boolean
-      isBlurredImages: boolean
-      participants: Blog[]
-      messages: MessagesObject
-      token: string
-    }>(url)
+    const response = await this.fetch<MessagesResponse>(url)
+
+    this.subscribeToMessages(response.json.response.token, conversationId, blogName)
+
     return {
       ...response,
       json: response.json.response,
+    }
+  }
+
+  sendMessage = async (body: OutgoingMessage) => {
+    const response = await this.fetch<MessagesResponse>(API_URLS.MESSAGES, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+
+    return {
+      ...response,
+      json: response.json.response,
+    }
+  }
+
+  dispose = () => {
+    this.disposeConversationsChannel()
+  }
+
+  disposeConversationsChannel = () => {
+    this.conversationsChannel.channel?.dispose()
+    this.conversationsChannel = {}
+  }
+
+  getConnectionInfo = async (): Promise<{ endpoint: string, options?: WebSocketClientOptions }> => ({
+    endpoint: `wss://telegraph.srvcs.tumblr.com/socket?token=${this.conversationsChannel.token}`,
+    options: { headers: CHANNEL_HEADERS },
+  })
+
+  subscribeToMessages = async (token: string, conversationId: string, blogName: string) => {
+    if (!this.conversationsChannel.token) {
+      this.conversationsChannel.token = token
+      this.conversationsChannel.channel = new ConversationsChannel(
+        this.getConnectionInfo,
+        this.onChannelMessage,
+      )
+      await this.conversationsChannel.channel.connect()
+    }
+
+    this.conversationsChannel.channel?.subscribeToMessages(conversationId, blogName)
+  }
+
+  onChannelMessage = (buffer: Buffer) => {
+    try {
+      const messageEvent: {
+        event: string
+        data: string
+        channel: string
+      } = JSON.parse(`${buffer}`)
+      if (messageEvent.event !== CHANNEL_EVENTS.NEW_MESSAGE) {
+        return
+      }
+      const { conversationId } = ConversationsChannel.parseConversationChannelString(messageEvent.channel)
+      const message = JSON.parse(messageEvent.data)
+      this.eventCallback([{
+        type: ServerEventType.STATE_SYNC,
+        objectIDs: {
+          threadID: conversationId,
+        },
+        objectName: 'message',
+        mutationType: 'upsert',
+        entries: [camelCaseKeys(message)],
+      }])
+    } catch (err) {
+      texts.error('Was not able to process the incoming message', err)
     }
   }
 }

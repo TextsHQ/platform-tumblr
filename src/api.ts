@@ -2,15 +2,18 @@ import {
   ActivityType, Awaitable, CurrentUser, CustomEmojiMap, FetchInfo, LoginCreds,
   LoginResult, Message, MessageContent, MessageLink, MessageSendOptions, OnConnStateChangeCallback,
   OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap,
-  SearchMessageOptions, Thread, User, OverridablePlatformInfo, OnLoginEventCallback, ThreadFolderName,
+  SearchMessageOptions, Thread, User, OnLoginEventCallback, ThreadFolderName,
   ThreadID, StickerPack, StickerPackID, Attachment, MessageID, UserID, PhoneNumber, AttachmentID,
-  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo,
+  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, ServerEvent, ServerEventType, ReAuthError, PaginatedWithCursors,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
-import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration, TumblrUserInfo } from './types'
-import { mapCurrentUser, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
+import type {
+  AuthCredentialsWithDuration, AuthCredentialsWithExpiration, OutgoingMessage, TumblrUserInfo,
+  Message as TumblrMessage,
+} from './types'
+import { mapCurrentUser, mapMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
@@ -30,26 +33,33 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   /** `dispose` disconnects all network connections and cleans up. Called when user disables account and when app exits. */
   // Temporarily keeping an empty dispose() method to prevent errors while under development.
   // eslint-disable-next-line class-methods-use-this
-  dispose = async () => {}
+  dispose = async () => {
+    this.network.dispose()
+  }
 
-  getPlatformInfo = async (): Promise<Partial<OverridablePlatformInfo>> => ({
-    reactions: {
-      supported: {},
-      canReactWithAllEmojis: false,
-      allowsMultipleReactionsToSingleMessage: false,
-    },
-    attachments: {
-      noSupportForVideo: true,
-      noSupportForAudio: true,
-      noSupportForFiles: true,
-    },
-  })
+  /**
+   * Event middleware that maps event data
+   */
+  private handleEvent = (onEvent: OnServerEventCallback) => (events: ServerEvent[]) => {
+    const mappedEvents = events.map(event => {
+      if (event.type === ServerEventType.STATE_SYNC && event.mutationType === 'upsert') {
+        return {
+          ...event,
+          entries: event.entries.map(message => mapMessage(message as unknown as TumblrMessage, this.currentUser.activeBlog)),
+        }
+      }
+
+      return event
+    })
+    onEvent(mappedEvents)
+  }
 
   subscribeToEvents = (onEvent: OnServerEventCallback) => {
-    this.network.eventCallback = onEvent
+    const handleEvent = this.handleEvent(onEvent)
+    this.network.eventCallback = handleEvent
     if (this.network.pendingEventsQueue.length > 0) {
-      onEvent(this.network.pendingEventsQueue)
-      this.network.pendingEventsQueue.length = 0
+      handleEvent(this.network.pendingEventsQueue)
+      this.network.pendingEventsQueue = []
     }
   }
 
@@ -82,7 +92,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
-    const { jsCodeResult } = creds
+    const jsCodeResult = (creds as { jsCodeResult?: string })?.jsCodeResult
 
     if (!jsCodeResult) {
       return {
@@ -122,13 +132,13 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   searchThreads?: (typed: string) => Awaitable<Thread[]>
 
-  searchMessages?: (typed: string, pagination?: PaginationArg, options?: SearchMessageOptions) => Awaitable<Paginated<Message>>
+  searchMessages?: (typed: string, pagination?: PaginationArg, options?: SearchMessageOptions) => Awaitable<PaginatedWithCursors<Message>>
 
   getPresence?: () => Awaitable<PresenceMap>
 
   getCustomEmojis?: () => Awaitable<CustomEmojiMap>
 
-  getThreads = async (folderName: ThreadFolderName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
+  getThreads = async (folderName: ThreadFolderName, pagination?: PaginationArg): Promise<PaginatedWithCursors<Thread>> => {
     const response = await this.network.getConversations(pagination)
     const { conversations, links } = response.json
     return mapPaginatedThreads({ conversations, links, currentUser: this.currentUser })
@@ -144,11 +154,32 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     return mapPaginatedMessages(response.json.messages, this.currentUser.activeBlog)
   }
 
-  getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Participant>>
+  /**
+   * @todo
+   *   - Move mapping to mappers.ts
+   *   - Add support for sending attachments
+   */
+  sendMessage = async (threadID: ThreadID, content: MessageContent): Promise<boolean | Message[]> => {
+    if (!this.currentUser?.activeBlog?.uuid) {
+      throw new ReAuthError('User credentials are absent. Try reauthenticating.')
+    }
 
-  getStickerPacks?: (pagination?: PaginationArg) => Awaitable<Paginated<StickerPack>>
+    const body: OutgoingMessage = {
+      conversation_id: threadID,
+      type: 'TEXT',
+      participant: this.currentUser.activeBlog.uuid,
+      message: content.text,
+    }
 
-  getStickers?: (stickerPackID: StickerPackID, pagination?: PaginationArg) => Awaitable<Paginated<Attachment>>
+    const response = await this.network.sendMessage(body)
+    return response.json.messages.data.map(message => mapMessage(message, this.currentUser.activeBlog))
+  }
+
+  getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<PaginatedWithCursors<Participant>>
+
+  getStickerPacks?: (pagination?: PaginationArg) => Awaitable<PaginatedWithCursors<StickerPack>>
+
+  getStickers?: (stickerPackID: StickerPackID, pagination?: PaginationArg) => Awaitable<PaginatedWithCursors<Attachment>>
 
   getThread?: (threadID: ThreadID) => Awaitable<Thread | undefined>
 
@@ -163,8 +194,6 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   deleteThread?: (threadID: ThreadID) => Awaitable<void>
 
   reportThread?: (type: 'spam', threadID: ThreadID, firstMessageID?: MessageID) => Awaitable<boolean>
-
-  sendMessage?: (threadID: ThreadID, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
 
   editMessage?: (threadID: ThreadID, messageID: MessageID, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
 

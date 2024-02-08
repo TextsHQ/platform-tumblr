@@ -114,8 +114,10 @@ export interface ApiLinks {
   prev?: ApiLink
 }
 
+export type MessageType = 'TEXT' | 'IMAGE' | 'STICKER' | 'POSTREF'
+
 export interface Message {
-  type: 'TEXT' | 'IMAGE' | 'STICKER' | 'POSTREF'
+  type: MessageType
   participant: string // matches to Blog.uuid
   ts: string
   unread?: boolean
@@ -130,6 +132,15 @@ export interface Message {
   couldNotSend?: boolean
   stickerId?: string
 }
+
+interface OutgoingMessageText {
+  type: 'TEXT'
+  conversation_id: string
+  message: string
+  participant: string
+}
+
+export type OutgoingMessage = OutgoingMessageText
 
 export type GIFPost = Post & {
   type: 'image'
@@ -196,4 +207,19 @@ export type ImageAsVideo = Image & {
 interface MessageImage {
   altSizes: Image[]
   originalSize: Image
+}
+
+export interface MessagesResponse {
+  objectType: string
+  id: string
+  status: ConversationStatus
+  lastModifiedTs: number
+  lastReadTs: number
+  canSend: boolean
+  unreadMesssagesCount: number
+  isPossibleSpam: boolean
+  isBlurredImages: boolean
+  participants: Blog[]
+  messages: MessagesObject
+  token: string
 }

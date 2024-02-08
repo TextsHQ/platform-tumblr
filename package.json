@@ -8,11 +8,9 @@
     "lint": "eslint src --ext ts,tsx,js,jsx --cache"
   },
   "dependencies": {
-    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#0bde861ffc0960c33be30c7c72660cd7341de2c9",
-    "@types/tough-cookie": "^4.0.5",
+    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#main",
     "form-data": "^4.0.0",
-    "react": "https://github.com/TextsHQ/react-global-shim",
-    "tough-cookie": "^4.1.3"
+    "react": "https://github.com/TextsHQ/react-global-shim"
   },
   "devDependencies": {
     "@textshq/eslint-config": "https://github.com/TextsHQ/eslint-config#main",
