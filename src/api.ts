@@ -4,7 +4,7 @@ import {
   OnServerEventCallback, Paginated, PaginationArg, Participant, PlatformAPI, PresenceMap,
   SearchMessageOptions, Thread, User, OnLoginEventCallback, ThreadFolderName,
   ThreadID, StickerPack, StickerPackID, Attachment, MessageID, UserID, PhoneNumber, AttachmentID,
-  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo,
+  NotificationsInfo, GetAssetOptions, FetchURL, Asset, AssetInfo, PaginatedWithCursors,
 } from '@textshq/platform-sdk'
 import type { Readable } from 'stream'
 
@@ -53,7 +53,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   }
 
   login = async (creds?: LoginCreds): Promise<LoginResult> => {
-    const { jsCodeResult } = creds
+    const jsCodeResult = (creds as { jsCodeResult?: string })?.jsCodeResult
 
     if (!jsCodeResult) {
       return {
@@ -93,13 +93,13 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   searchThreads?: (typed: string) => Awaitable<Thread[]>
 
-  searchMessages?: (typed: string, pagination?: PaginationArg, options?: SearchMessageOptions) => Awaitable<Paginated<Message>>
+  searchMessages?: (typed: string, pagination?: PaginationArg, options?: SearchMessageOptions) => Awaitable<PaginatedWithCursors<Message>>
 
   getPresence?: () => Awaitable<PresenceMap>
 
   getCustomEmojis?: () => Awaitable<CustomEmojiMap>
 
-  getThreads = async (folderName: ThreadFolderName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
+  getThreads = async (folderName: ThreadFolderName, pagination?: PaginationArg): Promise<PaginatedWithCursors<Thread>> => {
     const response = await this.network.getConversations(pagination)
     const currentUser = await this.network.getCurrentUser()
     const { conversations, links } = response.json
@@ -128,11 +128,11 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     return response.json.messages.data.map(message => mapMessage(message, currentUser.activeBlog))
   }
 
-  getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<Paginated<Participant>>
+  getThreadParticipants?: (threadID: ThreadID, pagination?: PaginationArg) => Awaitable<PaginatedWithCursors<Participant>>
 
-  getStickerPacks?: (pagination?: PaginationArg) => Awaitable<Paginated<StickerPack>>
+  getStickerPacks?: (pagination?: PaginationArg) => Awaitable<PaginatedWithCursors<StickerPack>>
 
-  getStickers?: (stickerPackID: StickerPackID, pagination?: PaginationArg) => Awaitable<Paginated<Attachment>>
+  getStickers?: (stickerPackID: StickerPackID, pagination?: PaginationArg) => Awaitable<PaginatedWithCursors<Attachment>>
 
   getThread?: (threadID: ThreadID) => Awaitable<Thread | undefined>
 

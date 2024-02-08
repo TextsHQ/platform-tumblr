@@ -1,38 +1,49 @@
-import WS from 'ws'
+import PersistentWS, { WebSocketClientOptions } from '@textshq/platform-sdk/dist/PersistentWS'
 import { texts } from '@textshq/platform-sdk'
 import { CHANNEL_EVENTS } from '../constants'
 
-export default class ConversationsChannel extends WS {
+export default class ConversationsChannel extends PersistentWS {
   /**
    * The ping pong interval timeout to keep the channel open
    */
   private activityTimeout = 30_000
+
+  private stopPinging = false
 
   private pingTimeoutId: ReturnType<typeof setTimeout>
 
   private subscriptions: string[] = []
 
   constructor(
-    address: string,
-    options: WS.ClientOptions,
+    getConnectionInfo: () => Promise<{ endpoint: string, options?: WebSocketClientOptions }>,
+    onMessage: (msg: Buffer) => void,
+    onOpen?: () => void,
+    onClose?: (code?: number) => { retry: boolean } | void,
+    onError?: (error: Error) => { retry: boolean } | void,
   ) {
-    super(address, options)
-    this.on('message', this.onConnectionEstablished)
-    this.on('message', this.onSubscriptionSucceeded)
-    this.on('message', this.ping)
+    super(
+      getConnectionInfo,
+      (...args) => {
+        onMessage(...args)
+        this.onConnectionEstablished(...args)
+        this.stopPinging = false
+        this.ping()
+      },
+      onOpen,
+      (...args) => {
+        this.stopPinging = true
+        return onClose?.(...args)
+      },
+      (...args) => {
+        this.stopPinging = true
+        return onError?.(...args)
+      },
+    )
   }
 
-  listenToConversation(conversationId: string, blogName: string) {
-    const channel = `private-messaging-${conversationId}-${blogName}.tumblr.com`
-    if (this.subscriptions.includes(channel)) {
-      return
-    }
-    const message = JSON.stringify({ event: CHANNEL_EVENTS.SUBSCRIBE, data: { auth: '', channel } })
-    if (this.readyState === WS.OPEN) {
-      this.send(message)
-    } else {
-      this.on('open', () => this.send(message))
-    }
+  subscribeToMessages(conversationId: string, blogName: string) {
+    const message = JSON.stringify({ event: 'pusher:subscribe', data: { auth: '', channel: `private-messaging-${conversationId}-${blogName}.tumblr.com` } })
+    this.send(message)
   }
 
   onSubscriptionSucceeded(buffer: Buffer) {
@@ -64,16 +75,11 @@ export default class ConversationsChannel extends WS {
       clearTimeout(this.pingTimeoutId)
     }
 
+    if (this.stopPinging) {
+      return
+    }
+
     this.pingTimeoutId = setTimeout(() => {
-      if (this.readyState === WS.CLOSED || this.readyState === WS.CLOSING) {
-        return
-      }
-
-      if (this.readyState === WS.CONNECTING) {
-        this.ping()
-        return
-      }
-
       this.send(JSON.stringify({ event: CHANNEL_EVENTS.PING, data: {} }))
 
       this.ping()
