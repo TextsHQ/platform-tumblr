@@ -2,7 +2,7 @@ import path from 'path'
 import * as fs from 'fs/promises'
 import {
   Attachment, AttachmentType, CurrentUser, Message, MessageContent, MessageLink,
-  Paginated, PaginatedWithCursors, Participant, Thread, UserSocialAttributes,
+  Paginated, PaginatedWithCursors, Participant, Thread, User, UserSocialAttributes,
 } from '@textshq/platform-sdk'
 import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, Blog, ApiLinks, OutgoingMessage } from './types'
 import { UNTITLED_BLOG } from './constants'
@@ -261,3 +261,12 @@ export const mapMessageContentToOutgoingMessage = async (conversationId: string,
     message: content.text,
   }
 }
+
+export const mapBlogToUser = (blog: Blog): User => ({
+  id: blog.uuid,
+  username: blog.name,
+  fullName: blog.name,
+  imgURL: blog.avatar[0]?.url,
+  isSelf: false,
+  social: mapUserSocialAttributes(blog),
+})

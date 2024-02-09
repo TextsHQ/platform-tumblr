@@ -29,6 +29,7 @@ import {
   MessagesResponse,
   UnreadCountsResponse,
   Message,
+  Blog,
 } from '../types'
 import ConversationsChannel from './conversation-channel'
 import { camelCaseKeys } from './word-case'
@@ -345,6 +346,14 @@ export class TumblrClient {
       if (conversationId && unreadCount > 0) {
         this.getUnreadMessages(conversationId, unreadCount)
       }
+    }
+  }
+
+  getParticipantSuggestions = async (q: string) => {
+    const response = await this.fetch<{ blogs: Blog[] }>(`${API_URLS.PARTICIPANT_SUGGESTIONS}?q=${q}`)
+    return {
+      ...response,
+      json: response.json.response,
     }
   }
 }

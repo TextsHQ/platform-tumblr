@@ -10,7 +10,7 @@ import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
 import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration } from './types'
-import { mapCurrentUser, mapMessage, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
+import { mapBlogToUser, mapCurrentUser, mapMessage, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
@@ -90,7 +90,10 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   serializeSession = () => ({ creds: this.network.getAuthCreds() })
 
-  searchUsers?: (typed: string) => Awaitable<User[]>
+  searchUsers = async (typed: string): Promise<User[]> => {
+    const { json: { blogs } } = await this.network.getParticipantSuggestions(typed)
+    return blogs.map(mapBlogToUser)
+  }
 
   searchThreads?: (typed: string) => Awaitable<Thread[]>
 

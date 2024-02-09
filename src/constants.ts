@@ -64,7 +64,15 @@ export const API_URLS = {
    */
   MESSAGES: `${API_URL}/conversations/messages`,
 
+  /**
+   * Retrieves the number of unread messages for each conversation
+   */
   UNREAD_COUNTS: `${API_URL}/user/counts?unread=true&unread_messages=true`,
+
+  /**
+   * Fetches the Tumblr blogs matching the query, with whom the user can start chatting
+   */
+  PARTICIPANT_SUGGESTIONS: `${API_URL}/conversations/participant_suggestions`,
 }
 
 /**
