@@ -22,6 +22,7 @@ const info: PlatformInfo = {
     Attribute.NO_SUPPORT_GROUP_TITLE_CHANGE,
     Attribute.NO_SUPPORT_GROUP_REMOVE_PARTICIPANT,
     Attribute.SUBSCRIBE_TO_THREAD_SELECTION,
+    Attribute.SINGLE_THREAD_CREATION_REQUIRES_MESSAGE,
   ]),
   loginMode: 'browser',
   browserLogins: [

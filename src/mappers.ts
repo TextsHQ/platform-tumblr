@@ -4,7 +4,10 @@ import {
   Attachment, AttachmentType, CurrentUser, Message, MessageContent, MessageLink,
   Paginated, PaginatedWithCursors, Participant, Thread, User, UserSocialAttributes,
 } from '@textshq/platform-sdk'
-import { Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages, Blog, ApiLinks, OutgoingMessage } from './types'
+import {
+  Conversation, TumblrUserInfo, Message as TumblrMessage, MessagesObject as TumblrMessages,
+  Blog, ApiLinks, OutgoingMessage, OutgoingMessageToCreateConversation,
+} from './types'
 import { UNTITLED_BLOG } from './constants'
 
 const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => {
@@ -205,7 +208,7 @@ export const mapThread = (conversation: Conversation, currentUser: TumblrUserInf
 
   return ({
     folderName: 'normal',
-    id: `${conversation.id}`,
+    id: conversation.id,
     isUnread: !!conversation.unreadMessagesCount,
     /** ID of the last message that the current user has read */
     lastReadMessageID,
@@ -234,7 +237,7 @@ export const mapPaginatedThreads = ({
   oldestCursor: links?.next?.href || links?.prev?.href,
 })
 
-export const mapMessageContentToOutgoingMessage = async (conversationId: string, blog: Blog, content: MessageContent): Promise<OutgoingMessage> => {
+export const mapMessageContentToOutgoingMessage = async (conversationId: string, blog: { uuid: string }, content: MessageContent): Promise<OutgoingMessage> => {
   if (content.filePath || content.fileBuffer) {
     let data: File | Buffer
     let filename = ''
@@ -247,7 +250,7 @@ export const mapMessageContentToOutgoingMessage = async (conversationId: string,
     }
     return {
       type: 'IMAGE',
-      conversationId,
+      conversation_id: conversationId,
       participant: blog.uuid,
       data,
       filename,
@@ -259,6 +262,15 @@ export const mapMessageContentToOutgoingMessage = async (conversationId: string,
     type: 'TEXT',
     participant: blog.uuid,
     message: content.text,
+  }
+}
+
+export const mapMessageContentForNewConversations = async (participants: string[], content: MessageContent): Promise<OutgoingMessageToCreateConversation> => {
+  const outgoingMessage = await mapMessageContentToOutgoingMessage('', { uuid: participants[0] }, content)
+  delete outgoingMessage.conversation_id
+  return {
+    ...outgoingMessage,
+    participants,
   }
 }
 

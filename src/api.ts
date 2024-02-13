@@ -10,7 +10,7 @@ import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
 import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration } from './types'
-import { mapBlogToUser, mapCurrentUser, mapMessage, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads } from './mappers'
+import { mapBlogToUser, mapCurrentUser, mapMessage, mapMessageContentForNewConversations, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads, mapThread } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
@@ -144,7 +144,12 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getUser?: (ids: | { userID: UserID } | { username: string } | { phoneNumber: PhoneNumber } | { email: string }) => Awaitable<User | undefined>
 
-  createThread?: (userIDs: UserID[], title?: string, messageText?: string) => Awaitable<boolean | Thread>
+  createThread = async (userIDs: UserID[], title?: string, messageText?: string): Promise<boolean | Thread> => {
+    const currentUser = await this.network.getCurrentUser()
+    const body = await mapMessageContentForNewConversations([currentUser.activeBlog.uuid, ...userIDs], { text: messageText })
+    const response = await this.network.createConversation(body)
+    return mapThread(response.json, currentUser)
+  }
 
   updateThread?: (threadID: ThreadID, updates: Partial<Thread>) => Awaitable<void>
 
