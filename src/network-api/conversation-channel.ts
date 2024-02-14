@@ -42,7 +42,11 @@ export default class ConversationsChannel extends PersistentWS {
   }
 
   subscribeToMessages(conversationId: string, blogName: string) {
-    const message = JSON.stringify({ event: 'pusher:subscribe', data: { auth: '', channel: `private-messaging-${conversationId}-${blogName}.tumblr.com` } })
+    const channel = `private-messaging-${conversationId}-${blogName}.tumblr.com`
+    if (this.subscriptions.includes(channel)) {
+      return
+    }
+    const message = JSON.stringify({ event: 'pusher:subscribe', data: { auth: '', channel } })
     this.send(message)
   }
 
