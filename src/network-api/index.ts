@@ -204,6 +204,28 @@ export class TumblrClient {
     }
   }
 
+  deleteConversation = async (conversationId: string) => {
+    const user = await this.getCurrentUser()
+    const response = await this.fetch<string>(`${API_URLS.MESSAGES}?conversation_id=${conversationId}&participant=${user.activeBlog.name}.tumblr.com`, {
+      method: 'DELETE',
+    })
+
+    this.eventCallback([{
+      type: ServerEventType.STATE_SYNC,
+      objectIDs: {
+        threadID: conversationId,
+      },
+      objectName: 'thread',
+      mutationType: 'delete',
+      entries: [conversationId],
+    }])
+
+    return {
+      ...response,
+      json: { message: response.json.response },
+    }
+  }
+
   /**
    * Fetches the messages for conversation.
    */
@@ -385,6 +407,23 @@ export class TumblrClient {
     return {
       ...response,
       json: response.json.response,
+    }
+  }
+
+  markAsSpam = async (conversationId: string) => {
+    const user = await this.getCurrentUser()
+    const response = await this.fetch<string>(API_URLS.FLAG, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'spam',
+        context: 'inline',
+        conversation_id: conversationId,
+        participant: `${user.activeBlog.name}.tumblr.com` }),
+    })
+
+    return {
+      ...response,
+      json: { message: response.json.response },
     }
   }
 }
