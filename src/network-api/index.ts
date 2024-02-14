@@ -34,7 +34,7 @@ import {
 } from '../types'
 import ConversationsChannel from './conversation-channel'
 import { camelCaseKeys } from './word-case'
-import { mapMessage } from '../mappers'
+import { mapBlogNameToNetworkDomain, mapMessage } from '../mappers'
 
 /**
  * Strips out the api version path, because we use /v2/ by default.
@@ -225,7 +225,7 @@ export class TumblrClient {
 
   deleteConversation = async (conversationId: string) => {
     const user = await this.getCurrentUser()
-    const response = await this.fetch<string>(`${API_URLS.MESSAGES}?conversation_id=${conversationId}&participant=${user.activeBlog.name}.tumblr.com`, {
+    const response = await this.fetch<string>(`${API_URLS.MESSAGES}?conversation_id=${conversationId}&participant=${mapBlogNameToNetworkDomain(user.activeBlog.name)}`, {
       method: 'DELETE',
     })
 
@@ -245,6 +245,21 @@ export class TumblrClient {
     }
   }
 
+  markConversationAsRead = async (conversationId: string) => {
+    const user = await this.getCurrentUser()
+    const response = await this.fetch<any[]>(API_URLS.MARK_AS_READ, {
+      method: 'POST',
+      body: JSON.stringify({
+        conversation_id: conversationId,
+        participant: mapBlogNameToNetworkDomain(user.activeBlog.name),
+      }),
+    })
+
+    return {
+      ...response.json.response,
+    }
+  }
+
   /**
    * Fetches the messages for conversation.
    */
@@ -259,7 +274,7 @@ export class TumblrClient {
     pagination?: PaginationArg
     limit?: number
   }) => {
-    let url = `${API_URLS.MESSAGES}?participant=${blogName}.tumblr.com&conversation_id=${conversationId}`
+    let url = `${API_URLS.MESSAGES}?participant=${mapBlogNameToNetworkDomain(blogName)}&conversation_id=${conversationId}&preserve_last_read_ts=1`
     if (pagination) {
       url = `${url}&${pagination.direction}=${pagination.cursor}`
     }
@@ -389,7 +404,7 @@ export class TumblrClient {
 
   private getUnreadMessages = async (conversationId, unreadCount) => {
     const currentUser = await this.getCurrentUser()
-    const response = this.getMessages({
+    const response = await this.getMessages({
       conversationId,
       limit: unreadCount,
       blogName: currentUser.activeBlog.name,
@@ -402,7 +417,7 @@ export class TumblrClient {
       },
       objectName: 'message',
       mutationType: 'upsert',
-      entries: (await response).json.messages.data.map(message => mapMessage(message, currentUser.activeBlog)),
+      entries: response.json.messages.data.map(message => mapMessage(message, currentUser.activeBlog)),
     }])
   }
 
@@ -439,7 +454,7 @@ export class TumblrClient {
         type: 'spam',
         context: 'inline',
         conversation_id: conversationId,
-        participant: `${user.activeBlog.name}.tumblr.com` }),
+        participant: mapBlogNameToNetworkDomain(user.activeBlog.name) }),
     })
 
     return {

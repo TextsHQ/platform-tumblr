@@ -78,6 +78,11 @@ export const API_URLS = {
    * Flags the Tumblr blog and blocks them
    */
   FLAG: `${API_URL}/conversations/flag`,
+
+  /**
+   * Marks the conversation as read
+   */
+  MARK_AS_READ: `${API_URL}/conversations/mark_as_read`,
 }
 
 /**

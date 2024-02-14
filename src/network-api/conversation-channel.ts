@@ -1,6 +1,7 @@
 import PersistentWS, { WebSocketClientOptions } from '@textshq/platform-sdk/dist/PersistentWS'
 import { texts } from '@textshq/platform-sdk'
 import { CHANNEL_EVENTS } from '../constants'
+import { mapBlogNameToNetworkDomain } from '../mappers'
 
 export default class ConversationsChannel extends PersistentWS {
   /**
@@ -42,7 +43,7 @@ export default class ConversationsChannel extends PersistentWS {
   }
 
   subscribeToMessages(conversationId: string, blogName: string) {
-    const channel = `private-messaging-${conversationId}-${blogName}.tumblr.com`
+    const channel = `private-messaging-${conversationId}-${mapBlogNameToNetworkDomain(blogName)}`
     if (this.subscriptions.includes(channel)) {
       return
     }
