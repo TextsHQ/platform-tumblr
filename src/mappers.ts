@@ -131,7 +131,7 @@ const mapPostToMessage = (message: TumblrMessage): MapPostToMessageReturns => {
         const media = block.media[0]
         if (media) {
           result.attachments.push({
-            id: media.mediaKey,
+            id: media.mediaKey || media.url,
             srcURL: media.url,
             type: AttachmentType.IMG,
             size: {
