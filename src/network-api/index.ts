@@ -29,6 +29,8 @@ import {
   MessagesResponse,
   UnreadCountsResponse,
   Message,
+  Blog,
+  OutgoingMessageToCreateConversation,
 } from '../types'
 import ConversationsChannel from './conversation-channel'
 import { camelCaseKeys } from './word-case'
@@ -173,6 +175,36 @@ export class TumblrClient {
   }
 
   /**
+   * Creates the conversation by sending a message.
+   */
+  createConversation = async (body: OutgoingMessageToCreateConversation) => {
+    const options: FetchOptions = {
+      method: 'POST',
+    }
+    if (body.type === 'IMAGE') {
+      const form = new FormData()
+      form.append('type', 'IMAGE')
+      form.append('participant', body.participant)
+      form.append('participants', body.participants)
+      form.append('data', body.data, { filename: body.filename })
+      options.body = form
+      options.headers = form.getHeaders()
+    } else {
+      options.body = JSON.stringify(body)
+    }
+
+    const response = await this.fetch<MessagesResponse>(API_URLS.MESSAGES, options)
+    const currentUser = await this.getCurrentUser()
+    const { token, id } = response.json.response
+    this.subscribeToMessages(token, id, currentUser.activeBlog.name)
+
+    return {
+      ...response,
+      json: response.json.response,
+    }
+  }
+
+  /**
    * Fetches the messages for conversation.
    */
   getMessages = async ({
@@ -211,7 +243,7 @@ export class TumblrClient {
       const form = new FormData()
       form.append('type', 'IMAGE')
       form.append('participant', body.participant)
-      form.append('conversation_id', body.conversationId)
+      form.append('conversation_id', body.conversation_id)
       form.append('data', body.data, { filename: body.filename })
       options.body = form
       options.headers = form.getHeaders()
@@ -345,6 +377,14 @@ export class TumblrClient {
       if (conversationId && unreadCount > 0) {
         this.getUnreadMessages(conversationId, unreadCount)
       }
+    }
+  }
+
+  getParticipantSuggestions = async (q: string) => {
+    const response = await this.fetch<{ blogs: Blog[] }>(`${API_URLS.PARTICIPANT_SUGGESTIONS}?q=${q}`)
+    return {
+      ...response,
+      json: response.json.response,
     }
   }
 }

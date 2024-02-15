@@ -85,7 +85,7 @@ interface Avatar {
 
 export interface Conversation {
   objectType: 'conversation' | 'message'
-  id: number | string
+  id: string
   status: ConversationStatus
   lastModifiedTs: number
   lastReadTs: number
@@ -95,6 +95,10 @@ export interface Conversation {
   isBlurredImages: boolean
   participants: Blog[]
   messages: MessagesObject
+}
+
+export interface MessagesResponse extends Conversation {
+  token: string
 }
 
 export type ConversationStatus = 'ACTIVE' | 'INACTIVE'
@@ -143,12 +147,20 @@ interface OutgoingMessageText {
 interface OutgoingMessageImage {
   type: 'IMAGE'
   participant: string
-  conversationId: string
+  conversation_id: string
   data: File | Buffer
   filename: string
 }
 
 export type OutgoingMessage = OutgoingMessageText | OutgoingMessageImage
+
+type OutgoingMessageForNewConversation<T extends { conversation_id: string }> = Omit<T, 'conversation_id'> & {
+  participants: string[]
+}
+
+export type OutgoingMessageToCreateConversation =
+  OutgoingMessageForNewConversation<OutgoingMessageImage> |
+  OutgoingMessageForNewConversation<OutgoingMessageText>
 
 export type GIFPost = Post & {
   type: 'image'
@@ -215,21 +227,6 @@ export type ImageAsVideo = Image & {
 interface MessageImage {
   altSizes: Image[]
   originalSize: Image
-}
-
-export interface MessagesResponse {
-  objectType: string
-  id: string
-  status: ConversationStatus
-  lastModifiedTs: number
-  lastReadTs: number
-  canSend: boolean
-  unreadMesssagesCount: number
-  isPossibleSpam: boolean
-  isBlurredImages: boolean
-  participants: Blog[]
-  messages: MessagesObject
-  token: string
 }
 
 export interface UnreadCountsResponse {
