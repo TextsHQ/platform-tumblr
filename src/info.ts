@@ -44,6 +44,14 @@ const info: PlatformInfo = {
         }, 200)
       } finally {}
     `,
+      // hide the header, the mobile app badges and the Sign Up link
+      runJSOnLaunch: `
+        try {
+          document.querySelector('header').parentElement.style.display = "none";
+          document.querySelector('[data-app-type="apple"]').parentElement.parentElement.style.display = "none";
+          document.querySelector('a[href^="/register"]').parentElement.style.display = "none";
+        } catch {}
+      `,
     },
   ],
   reactions: {
