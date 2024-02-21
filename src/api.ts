@@ -142,7 +142,14 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getMessage?: (threadID: ThreadID, messageID: MessageID) => Awaitable<Message | undefined>
 
-  getUser?: (ids: | { userID: UserID } | { username: string } | { phoneNumber: PhoneNumber } | { email: string }) => Awaitable<User | undefined>
+  getUser = async (ids: | { userID: UserID } | { username: string } | { phoneNumber: PhoneNumber } | { email: string }): Promise<User | undefined> => {
+    const { userID } = ids as { userID: UserID }
+    if (!userID) {
+      return
+    }
+    const response = await this.network.getUser(userID)
+    return mapBlogToUser(response.json.user)
+  }
 
   createThread = async (userIDs: UserID[], title?: string, messageText?: string): Promise<boolean | Thread> => {
     const currentUser = await this.network.getCurrentUser()
