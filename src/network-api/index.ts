@@ -378,6 +378,8 @@ export class TumblrClient {
 
     try {
       await this.checkUnreadCounts()
+    } catch (err) {
+      texts.log('Tumblr.network.checkUnreadCounts errored', err)
     } finally {
       this.unreadCountsPollingTimoutId = setTimeout(() => {
         this.pollUnreadCounts()
