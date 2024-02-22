@@ -57,6 +57,8 @@ export class TumblrClient {
 
   private unreadCountsPollingTimoutId: ReturnType<typeof setTimeout>
 
+  private authTokenRefresh: Promise<void> = null
+
   pendingEventsQueue: ServerEvent[] = []
 
   eventCallback: OnServerEventCallback = (events: ServerEvent[]) => {
@@ -93,6 +95,19 @@ export class TumblrClient {
       return
     }
 
+    // If there is already another auth token refresh is happening
+    // then return that
+    if (this.authTokenRefresh instanceof Promise) {
+      return this.authTokenRefresh
+    }
+
+    let resolve: () => void = () => {}
+    let reject: () => void = () => {}
+    this.authTokenRefresh = new Promise((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+
     try {
       const response = await this.httpClient.requestAsString(OAUTH_TOKEN_REFRESH_URL, {
         method: 'POST',
@@ -105,8 +120,12 @@ export class TumblrClient {
       this.eventCallback([{
         type: ServerEventType.SESSION_UPDATED,
       }])
+      resolve()
     } catch (err) {
+      reject()
       throw new Error(`Wasn't able to renew the access_token. Error: ${err}`)
+    } finally {
+      this.authTokenRefresh = null
     }
   }
 
