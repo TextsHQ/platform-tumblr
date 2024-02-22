@@ -73,6 +73,11 @@ export const API_URLS = {
    * Fetches the Tumblr blogs matching the query, with whom the user can start chatting
    */
   PARTICIPANT_SUGGESTIONS: `${API_URL}/conversations/participant_suggestions`,
+
+  /**
+   * Flags the Tumblr blog and blocks them
+   */
+  FLAG: `${API_URL}/conversations/flag`,
 }
 
 /**

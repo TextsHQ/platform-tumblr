@@ -153,9 +153,15 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   updateThread?: (threadID: ThreadID, updates: Partial<Thread>) => Awaitable<void>
 
-  deleteThread?: (threadID: ThreadID) => Awaitable<void>
+  deleteThread = async (threadID: ThreadID): Promise<void> => {
+    await this.network.deleteConversation(threadID)
+  }
 
-  reportThread?: (type: 'spam', threadID: ThreadID, firstMessageID?: MessageID) => Awaitable<boolean>
+  reportThread = async (type: 'spam', threadID: ThreadID): Promise<boolean> => {
+    await this.network.markAsSpam(threadID)
+    await this.deleteThread(threadID)
+    return true
+  }
 
   editMessage?: (threadID: ThreadID, messageID: MessageID, content: MessageContent, options?: MessageSendOptions) => Promise<boolean | Message[]>
 
