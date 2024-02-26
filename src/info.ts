@@ -1,7 +1,7 @@
 import { PlatformInfo, MessageDeletionMode, Attribute } from '@textshq/platform-sdk'
 
 const info: PlatformInfo = {
-  name: 'Tumblr',
+  name: 'tumblr',
   version: '0.0.1',
   tags: ['Beta'],
   displayName: 'Tumblr',
