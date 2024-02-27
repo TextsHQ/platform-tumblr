@@ -144,10 +144,11 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getUser = async (ids: | { userID: UserID } | { username: string } | { phoneNumber: PhoneNumber } | { email: string }): Promise<User | undefined> => {
     const { userID } = ids as { userID: UserID }
-    if (!userID) {
+    const { username } = ids as { username: string }
+    if (!userID && !username) {
       return
     }
-    const response = await this.network.getUser(userID)
+    const response = await this.network.getUser(userID || username)
     return mapBlogToUser(response.json.user)
   }
 
