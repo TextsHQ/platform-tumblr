@@ -447,4 +447,12 @@ export class TumblrClient {
       json: { message: response.json.response },
     }
   }
+
+  getUser = async (userID: string) => {
+    const response = await this.fetch<{ blog: Blog }>(`${API_URLS.BASE}/blog/${userID}/info`)
+    return {
+      ...response,
+      json: { user: response.json.response.blog },
+    }
+  }
 }
