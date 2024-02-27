@@ -239,7 +239,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
       blogName: user.activeBlog.name,
     })
 
-    return JSON.stringify(response.json)
+    return JSON.stringify(response.json, null, 2)
   }
 
   handleDeepLink?: (link: string) => void
