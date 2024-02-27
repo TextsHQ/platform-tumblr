@@ -138,7 +138,14 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   getStickers?: (stickerPackID: StickerPackID, pagination?: PaginationArg) => Awaitable<PaginatedWithCursors<Attachment>>
 
-  getThread?: (threadID: ThreadID) => Awaitable<Thread | undefined>
+  getThread = async (threadID: ThreadID): Promise<Thread | undefined> => {
+    const user = await this.network.getCurrentUser()
+    const response = await this.network.getMessages({
+      conversationId: threadID,
+      blogName: user.activeBlog.name,
+    })
+    return mapThread(response.json, user)
+  }
 
   getMessage?: (threadID: ThreadID, messageID: MessageID) => Awaitable<Message | undefined>
 
@@ -222,7 +229,19 @@ export default class TumblrPlatformAPI implements PlatformAPI {
   getAssetInfo?: (fetchOptions?: GetAssetOptions, ...args: string[]) => Awaitable<AssetInfo>
 
   /** `getOriginalObject` returns the JSON representation of the original thread or message */
-  getOriginalObject?: (objName: 'thread' | 'message', objectID: ThreadID | MessageID) => Awaitable<string>
+  getOriginalObject = async (objName: 'thread' | 'message', objectID: ThreadID | MessageID): Promise<string> => {
+    if (objName !== 'thread') {
+      return ''
+    }
+
+    const user = await this.network.getCurrentUser()
+    const response = await this.network.getMessages({
+      conversationId: objectID,
+      blogName: user.activeBlog.name,
+    })
+
+    return JSON.stringify(response.json, null, 2)
+  }
 
   handleDeepLink?: (link: string) => void
 
