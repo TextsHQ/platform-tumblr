@@ -22,7 +22,7 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.PAT_USER }}:${{ secrets.PAT }}@github.com/".insteadOf "https://github.com/"
 
-      - uses: TextsHQ/platform-integration-builder@v2.0.1
+      - uses: TextsHQ/platform-integration-builder@v2.0.2
         id: publish
         with:
           s3-access-key-id: ${{ secrets.S3_ACCESS_KEY_ID }}
