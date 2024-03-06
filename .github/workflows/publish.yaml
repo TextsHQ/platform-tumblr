@@ -2,8 +2,8 @@ name: Publish Integration
 
 on:
   push:
-    branches: 
-      - main
+    tags:
+      - 'v*'
   pull_request:
 
 jobs:
@@ -39,8 +39,16 @@ jobs:
         with:
           comment_tag: manifest
           message: ${{ steps.publish.outputs.summary }}
-  
-      - uses: peter-evans/commit-comment@v3
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+      - name: Create Release
+        id: create_release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
           body: ${{ steps.publish.outputs.summary }}
+          draft: false
+          prerelease: true
