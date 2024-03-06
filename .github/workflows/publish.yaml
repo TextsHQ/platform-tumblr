@@ -35,6 +35,12 @@ jobs:
             yarn build
 
       - uses: thollander/actions-comment-pull-request@v2
+        if: github.event_name == 'pull_request'
         with:
           comment_tag: manifest
           message: ${{ steps.publish.outputs.summary }}
+  
+      - uses: peter-evans/commit-comment@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          body: ${{ steps.publish.outputs.summary }}
