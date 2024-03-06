@@ -282,3 +282,5 @@ export const mapBlogToUser = (blog: Blog): User => ({
   isSelf: false,
   social: mapUserSocialAttributes(blog),
 })
+
+export const mapBlogNameToNetworkDomain = (blogName: string) => `${blogName}.tumblr.com`

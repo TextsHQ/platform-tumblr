@@ -186,7 +186,9 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   deleteMessage?: (threadID: ThreadID, messageID: MessageID, forEveryone?: boolean) => Awaitable<void>
 
-  sendReadReceipt: (threadID: ThreadID, messageID: MessageID, messageCursor?: string) => Awaitable<void>
+  sendReadReceipt = async (threadID: ThreadID): Promise<void> => {
+    await this.network.markConversationAsRead(threadID)
+  }
 
   addReaction?: (threadID: ThreadID, messageID: MessageID, reactionKey: string) => Awaitable<void>
 
