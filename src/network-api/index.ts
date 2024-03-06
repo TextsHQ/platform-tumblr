@@ -255,9 +255,7 @@ export class TumblrClient {
       }),
     })
 
-    return {
-      ...response.json.response,
-    }
+    return response.json.response
   }
 
   /**
