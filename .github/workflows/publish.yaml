@@ -2,8 +2,8 @@ name: Publish Integration
 
 on:
   push:
-    branches: 
-      - main
+    tags:
+      - 'v*'
   pull_request:
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.PAT_USER }}:${{ secrets.PAT }}@github.com/".insteadOf "https://github.com/"
 
-      - uses: TextsHQ/platform-integration-builder@v2.0.2
+      - uses: TextsHQ/platform-integration-builder@v2.5.3
         id: publish
         with:
           s3-access-key-id: ${{ secrets.S3_ACCESS_KEY_ID }}
@@ -39,8 +39,7 @@ jobs:
         with:
           comment_tag: manifest
           message: ${{ steps.publish.outputs.summary }}
-  
-      - uses: peter-evans/commit-comment@v3
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          body: ${{ steps.publish.outputs.summary }}
+
+      - name: Results
+        run: |
+          echo "${{ steps.publish.outputs.summary }}"
