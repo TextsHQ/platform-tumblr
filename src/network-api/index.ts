@@ -35,6 +35,7 @@ import {
 import ConversationsChannel from './conversation-channel'
 import { camelCaseKeys } from './word-case'
 import { mapBlogNameToNetworkDomain, mapMessage } from '../mappers'
+import { addThreadMessageIDs, getThreadIDs, getThreadLastReadMessageID, getThreadUnreadCount, updateThreadLastReadTs } from './state'
 
 /**
  * Strips out the api version path, because we use /v2/ by default.
@@ -187,9 +188,16 @@ export class TumblrClient {
     }
 
     const response = await this.fetch<{ conversations: Conversation[], links?: ApiLinks }>(url)
+    const { conversations, links } = response.json.response
+
+    for (const conversation of conversations) {
+      updateThreadLastReadTs(conversation.id, conversation)
+      addThreadMessageIDs(conversation.id, conversation.messages.data.map(m => m.ts))
+    }
+
     return {
       ...response,
-      json: response.json.response,
+      json: { conversations, links },
     }
   }
 
@@ -255,6 +263,8 @@ export class TumblrClient {
       }),
     })
 
+    updateThreadLastReadTs(conversationId)
+
     return response.json.response
   }
 
@@ -266,11 +276,13 @@ export class TumblrClient {
     blogName,
     pagination,
     limit,
+    skipStateUpdate = false,
   }: {
     conversationId: string
     blogName: string
     pagination?: PaginationArg
     limit?: number
+    skipStateUpdate?: boolean
   }) => {
     let url = `${API_URLS.MESSAGES}?participant=${mapBlogNameToNetworkDomain(blogName)}&conversation_id=${conversationId}&preserve_last_read_ts=1`
     if (pagination) {
@@ -280,12 +292,20 @@ export class TumblrClient {
       url = `${url}&limit=${limit}`
     }
     const response = await this.fetch<MessagesResponse>(url)
+    const conversation = response.json.response
 
-    this.subscribeToMessages(response.json.response.token, conversationId, blogName)
+    // this.subscribeToMessages(conversation.token, conversationId, blogName)
+
+    if (!skipStateUpdate) {
+      addThreadMessageIDs(
+        conversation.id,
+        conversation.messages.data.map(m => m.ts),
+      )
+    }
 
     return {
       ...response,
-      json: response.json.response,
+      json: conversation,
     }
   }
 
@@ -400,40 +420,21 @@ export class TumblrClient {
     }
   }
 
-  private getUnreadMessages = async (conversationId, unreadCount) => {
-    const currentUser = await this.getCurrentUser()
-    const response = await this.getMessages({
-      conversationId,
-      limit: unreadCount,
-      blogName: currentUser.activeBlog.name,
-    })
-
-    this.eventCallback([{
-      type: ServerEventType.STATE_SYNC,
-      objectIDs: {
-        threadID: conversationId,
-      },
-      objectName: 'message',
-      mutationType: 'upsert',
-      entries: response.json.messages.data.map(message => mapMessage(message, currentUser.activeBlog)),
-    }])
-  }
-
   private checkUnreadCounts = async () => {
     const currentUser = await this.getCurrentUser()
     const { unread_messages } = await this.getUnreadCounts()
 
-    for (const blogMentionKey in unread_messages) {
-      if (blogMentionKey === currentUser.activeBlog.mentionKey) {
-        const unreadCounts = unread_messages[blogMentionKey]
-        for (const conversationId in unreadCounts) {
-          if (Object.hasOwn(unreadCounts, conversationId)) {
-            const unreadCount = unreadCounts[conversationId]
-            if (unreadCount > 0) {
-              this.getUnreadMessages(conversationId, unreadCount)
-            }
-          }
-        }
+    const unreadCounts = unread_messages[currentUser.activeBlog.mentionKey] || {}
+    for (const conversationId of getThreadIDs()) {
+      const unreadCount = unreadCounts[conversationId] || 0
+      if (getThreadUnreadCount(conversationId) !== unreadCount) {
+        const { json: conversation } = await this.getMessages({
+          conversationId,
+          limit: unreadCount,
+          blogName: currentUser.activeBlog.name,
+          skipStateUpdate: true,
+        })
+        this.syncUnreadMessages(conversation)
       }
     }
   }
@@ -468,6 +469,47 @@ export class TumblrClient {
     return {
       ...response,
       json: { user: response.json.response.blog },
+    }
+  }
+
+  private syncUnreadMessages = async (conversation: Conversation) => {
+    const currentUser = await this.getCurrentUser()
+    const unreadCountBefore = getThreadUnreadCount(conversation.id)
+    const lastReadMessageIDBefore = getThreadLastReadMessageID(conversation.id)
+    updateThreadLastReadTs(conversation.id, conversation)
+    const newMessageIDs = addThreadMessageIDs(conversation.id, conversation.messages.data.map(m => m.ts))
+    const unreadCount = getThreadUnreadCount(conversation.id)
+    const lastReadMessageID = getThreadLastReadMessageID(conversation.id)
+
+    const events: ServerEvent[] = []
+    if (unreadCountBefore !== unreadCount || lastReadMessageIDBefore !== lastReadMessageID) {
+      events.push({
+        type: ServerEventType.STATE_SYNC,
+        mutationType: 'update',
+        objectName: 'thread',
+        objectIDs: {},
+        entries: [{
+          id: conversation.id,
+          isUnread: !!unreadCount,
+          lastReadMessageID,
+        }],
+      })
+    }
+
+    if (newMessageIDs.length) {
+      events.push({
+        type: ServerEventType.STATE_SYNC,
+        mutationType: 'upsert',
+        objectName: 'message',
+        objectIDs: {
+          threadID: conversation.id,
+        },
+        entries: conversation.messages.data.map(message => mapMessage(message, currentUser.activeBlog)),
+      })
+    }
+
+    if (events.length) {
+      this.eventCallback(events)
     }
   }
 }

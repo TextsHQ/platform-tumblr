@@ -1,7 +1,7 @@
 import path from 'path'
 import * as fs from 'fs/promises'
 import {
-  Attachment, AttachmentType, CurrentUser, Message, MessageContent, MessageLink,
+  Attachment, AttachmentType, CurrentUser, Message, MessageContent, MessageID, MessageLink,
   Paginated, PaginatedWithCursors, Participant, Thread, User, UserSocialAttributes,
 } from '@textshq/platform-sdk'
 import {
@@ -58,10 +58,16 @@ const getBlogForConversation = (conversation: Conversation, currentUser: TumblrU
   }
 }
 
-export const getLastReadMessageID = (conversation: Conversation): string => conversation.messages.data.slice().reverse().find(message => {
-  const ts = parseInt(message.ts, 10)
-  return !Number.isNaN(ts) && ts < conversation.lastReadTs * 1000
-})?.ts
+export const findLastReadMessageID = (messageIDs: MessageID[], lastReadTs: number): MessageID =>
+  messageIDs.slice(0).reverse().find(tsStr => {
+    const ts = parseInt(tsStr, 10)
+    return !Number.isNaN(ts) && ts < lastReadTs * 1000
+  })
+
+export const getLastReadMessageID = (conversation: Conversation): string => findLastReadMessageID(
+  conversation.messages.data.map(message => message.ts),
+  conversation.lastReadTs,
+)
 
 /**
  * Tries to infer if the message is seen or not from the optional
