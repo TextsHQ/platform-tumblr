@@ -58,9 +58,9 @@ const getBlogForConversation = (conversation: Conversation, currentUser: TumblrU
   }
 }
 
-const getLastReadMessageID = (conversation: Conversation): string => conversation.messages.data.find(message => {
+export const getLastReadMessageID = (conversation: Conversation): string => conversation.messages.data.slice().reverse().find(message => {
   const ts = parseInt(message.ts, 10)
-  return !Number.isNaN(ts) && ts > conversation.lastReadTs
+  return !Number.isNaN(ts) && ts < conversation.lastReadTs * 1000
 })?.ts
 
 /**
