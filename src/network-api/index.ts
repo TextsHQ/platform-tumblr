@@ -373,7 +373,7 @@ export class TumblrClient {
 
   getUnreadCounts = async () => {
     const response = await this.fetch(API_URLS.UNREAD_COUNTS)
-    return camelCaseKeys(response.json) as unknown as UnreadCountsResponse
+    return response.json as unknown as UnreadCountsResponse
   }
 
   setUnreadCountsPollingInterval = (interval: number) => {
@@ -420,18 +420,20 @@ export class TumblrClient {
   }
 
   private checkUnreadCounts = async () => {
-    if (!this.authCreds) {
-      return
-    }
+    const currentUser = await this.getCurrentUser()
+    const { unread_messages } = await this.getUnreadCounts()
 
-    const { unreadMessages } = await this.getUnreadCounts()
-
-    const conversations = Object.values(unreadMessages)
-    for (const conversation of conversations) {
-      const conversationId = Object.keys(conversation)[0]
-      const unreadCount = conversation[conversationId]
-      if (conversationId && unreadCount > 0) {
-        this.getUnreadMessages(conversationId, unreadCount)
+    for (const blogMentionKey in unread_messages) {
+      if (blogMentionKey === currentUser.activeBlog.mentionKey) {
+        const unreadCounts = unread_messages[blogMentionKey]
+        for (const conversationId in unreadCounts) {
+          if (Object.hasOwn(unreadCounts, conversationId)) {
+            const unreadCount = unreadCounts[conversationId]
+            if (unreadCount > 0) {
+              this.getUnreadMessages(conversationId, unreadCount)
+            }
+          }
+        }
       }
     }
   }
