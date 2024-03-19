@@ -189,10 +189,14 @@ export class TumblrClient {
 
     const response = await this.fetch<{ conversations: Conversation[], links?: ApiLinks }>(url)
     const { conversations, links } = response.json.response
+    const currentUser = await this.getCurrentUser()
 
     for (const conversation of conversations) {
       updateThreadLastReadTs(conversation.id, conversation)
-      addThreadMessageIDs(conversation.id, conversation.messages.data.map(m => m.ts))
+      addThreadMessageIDs(conversation.id, conversation.messages.data.map(m => ({
+        id: m.ts,
+        isSender: m.participant === currentUser.activeBlog.uuid,
+      })))
     }
 
     return {
@@ -293,13 +297,17 @@ export class TumblrClient {
     }
     const response = await this.fetch<MessagesResponse>(url)
     const conversation = response.json.response
+    const currentUser = await this.getCurrentUser()
 
-    // this.subscribeToMessages(conversation.token, conversationId, blogName)
+    this.subscribeToMessages(conversation.token, conversationId, blogName)
 
     if (!skipStateUpdate) {
       addThreadMessageIDs(
         conversation.id,
-        conversation.messages.data.map(m => m.ts),
+        conversation.messages.data.map(m => ({
+          id: m.ts,
+          isSender: m.participant === currentUser.activeBlog.uuid,
+        })),
       )
     }
 
@@ -477,7 +485,13 @@ export class TumblrClient {
     const unreadCountBefore = getThreadUnreadCount(conversation.id)
     const lastReadMessageIDBefore = getThreadLastReadMessageID(conversation.id)
     updateThreadLastReadTs(conversation.id, conversation)
-    const newMessageIDs = addThreadMessageIDs(conversation.id, conversation.messages.data.map(m => m.ts))
+    const newMessages = addThreadMessageIDs(
+      conversation.id,
+      conversation.messages.data.map(m => ({
+        id: m.ts,
+        isSender: m.participant === currentUser.activeBlog.uuid,
+      })),
+    )
     const unreadCount = getThreadUnreadCount(conversation.id)
     const lastReadMessageID = getThreadLastReadMessageID(conversation.id)
 
@@ -496,7 +510,8 @@ export class TumblrClient {
       })
     }
 
-    if (newMessageIDs.length) {
+    if (newMessages.length) {
+      const newMessageIDs = newMessages.map(m => m.id)
       events.push({
         type: ServerEventType.STATE_SYNC,
         mutationType: 'upsert',
@@ -504,7 +519,9 @@ export class TumblrClient {
         objectIDs: {
           threadID: conversation.id,
         },
-        entries: conversation.messages.data.map(message => mapMessage(message, currentUser.activeBlog)),
+        entries: conversation.messages.data
+          .filter(m => newMessageIDs.includes(m.ts))
+          .map(message => mapMessage(message, currentUser.activeBlog)),
       })
     }
 
