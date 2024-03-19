@@ -28,7 +28,12 @@
 - Once the WebSocket connection is established, we need to subscribe to the events for each thread that we are interested in.
 - In order to keep the connection alive, we need to dispatch "ping" messages in the WebSocket every 30 seconds.
 
+### Message ID
+
+- Messages in Tumblr does not have an ID attached to them. What they hav is a `ts` property which is a unix timestamp string. We use this property as an ID.
+
 ### New Messages (Unread Messages)
 
+- The thread/conversation object comes with a `lastReadTs` property which is a number of _seconds_ since the epoch time. We use it to determine which messages were read/unread.
 - There is an endpoint, `GET /user/counts`, that fetches information about the unread messages counts. We only get the number of unread messages per conversation/thread.
 - We keep track of messages that we have already fetched and the count of unread messages. If we detect that the unread count from `GET /user/counts` is different than what we have locally, we fetch new messages and merge them to local state.
