@@ -2,6 +2,9 @@
   "name": "@textshq/platform-tumblr",
   "version": "0.1.0",
   "main": "dist/index.js",
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "prepack": "tsc",
     "build": "yarn tsc",
