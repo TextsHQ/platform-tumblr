@@ -9,6 +9,7 @@ import {
   Blog, ApiLinks, OutgoingMessage, OutgoingMessageToCreateConversation,
 } from './types'
 import { UNTITLED_BLOG } from './constants'
+import type { TumblrClient } from './network-api'
 
 const mapUserSocialAttributes = (blog: Blog): UserSocialAttributes => {
   const social: UserSocialAttributes = {
@@ -243,7 +244,32 @@ export const mapPaginatedThreads = ({
   oldestCursor: links?.next?.href || links?.prev?.href,
 })
 
-export const mapMessageContentToOutgoingMessage = async (conversationId: string, blog: { uuid: string }, content: MessageContent): Promise<OutgoingMessage> => {
+/**
+ * Extracts the blog name and a post id from a tumblr post url.
+ *
+ * Handles different variations of the post urls. Like:
+ * 'https://nurguly.tumblr.com/729164932829052928',
+ * 'http://nurguly.tumblr.com/729164932829052928',
+ * 'https://tumblr.com/nurguly/729164932829052928',
+ * 'https://tumblr.com/nurguly/729164932829052928?source=share',
+ * 'https://tumblr.com/nurguly/729164932829052928/seo-friendly-name-of-the-post',
+ * 'https://www.tumblr.com/nurguly/729164932829052928',
+ * 'https://nu_rg-uly.tumblr.com/729164932829052928',
+ * 'https://tumblr.com/nu_rg-uly/729164932829052928',
+ * 'https://texts.com',
+ * 'automattic',
+ * '',
+ */
+export const parseTumblrPostUrl = (url = ''): { blogName?: string, postId?: string } => {
+  const result = url.matchAll(/(?:http|https)?:\/\/(?:www\.)?(?:(?<blogNameAsSubdomain>[0-9,a-z,A-Z_-]+)\.)?tumblr\.com\/(?:(?<blogNameAsPath>[0-9,a-z,A-Z_-]+)\/)?(?<postId>\d+).*/g)
+  const { blogNameAsSubdomain, blogNameAsPath, postId } = [...result][0]?.groups || {}
+  return {
+    blogName: blogNameAsSubdomain || blogNameAsPath,
+    postId,
+  }
+}
+
+export const mapMessageContentToOutgoingMessage = async (conversationId: string, blog: { uuid: string }, content: MessageContent, network: TumblrClient): Promise<OutgoingMessage> => {
   if (content.filePath || content.fileBuffer) {
     let data: File | Buffer
     let filename = ''
@@ -263,6 +289,28 @@ export const mapMessageContentToOutgoingMessage = async (conversationId: string,
     }
   }
 
+  const { link, includePreview } = content.links?.[0] || { includePreview: false, link: '' }
+  const { blogName, postId } = parseTumblrPostUrl(link)
+  if (includePreview && link && blogName && postId) {
+    const { json: urlInfo } = await network.getUrlInfo(link)
+    const { json: postBlog } = await network.getBlogInfo(blogName)
+    if (urlInfo && postBlog) {
+      const posterType = urlInfo.poster?.[0]?.type || ''
+      return {
+        type: 'POSTREF',
+        conversation_id: conversationId,
+        message: '',
+        participant: blog.uuid,
+        context: posterType === 'image/gif' ? 'messaging-gif' : 'post-chrome',
+        post: {
+          id: postId,
+          blog: postBlog.uuid,
+          type: 'post',
+        },
+      }
+    }
+  }
+
   return {
     conversation_id: conversationId,
     type: 'TEXT',
@@ -271,8 +319,8 @@ export const mapMessageContentToOutgoingMessage = async (conversationId: string,
   }
 }
 
-export const mapMessageContentForNewConversations = async (participants: string[], content: MessageContent): Promise<OutgoingMessageToCreateConversation> => {
-  const outgoingMessage = await mapMessageContentToOutgoingMessage('', { uuid: participants[0] }, content)
+export const mapMessageContentForNewConversations = async (participants: string[], content: MessageContent, network: TumblrClient): Promise<OutgoingMessageToCreateConversation> => {
+  const outgoingMessage = await mapMessageContentToOutgoingMessage('', { uuid: participants[0] }, content, network)
   delete outgoingMessage.conversation_id
   return {
     ...outgoingMessage,

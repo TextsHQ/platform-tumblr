@@ -31,6 +31,7 @@ import {
   Message,
   Blog,
   OutgoingMessageToCreateConversation,
+  UrlInfo,
 } from '../types'
 import ConversationsChannel from './conversation-channel'
 import { camelCaseKeys } from './word-case'
@@ -527,6 +528,22 @@ export class TumblrClient {
 
     if (events.length) {
       this.eventCallback(events)
+    }
+  }
+
+  getUrlInfo = async (url: string) => {
+    const response = await this.fetch<{ content: UrlInfo }>(`${API_URLS.URL_INFO}?url=${encodeURI(url)}`)
+    return {
+      ...response,
+      json: response.json.response.content,
+    }
+  }
+
+  getBlogInfo = async (blogName: string) => {
+    const response = await this.fetch<{ blog: Blog }>(`${API_URLS.BASE}/blog/${blogName}/info`)
+    return {
+      ...response,
+      json: response.json.response.blog,
     }
   }
 }

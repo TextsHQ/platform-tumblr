@@ -153,7 +153,20 @@ interface OutgoingMessageImage {
   filename: string
 }
 
-export type OutgoingMessage = OutgoingMessageText | OutgoingMessageImage
+interface OutgoingMessagePost {
+  type: 'POSTREF'
+  conversation_id: string
+  message: string
+  participant: string
+  context: 'messaging-gif' | 'post-chrome' | 'fast-post-chrome'
+  post: {
+    id: string
+    blog: string
+    type: 'post'
+  }
+}
+
+export type OutgoingMessage = OutgoingMessageText | OutgoingMessageImage | OutgoingMessagePost
 
 type OutgoingMessageForNewConversation<T extends { conversation_id: string }> = Omit<T, 'conversation_id'> & {
   participants: string[]
@@ -161,7 +174,8 @@ type OutgoingMessageForNewConversation<T extends { conversation_id: string }> = 
 
 export type OutgoingMessageToCreateConversation =
   OutgoingMessageForNewConversation<OutgoingMessageImage> |
-  OutgoingMessageForNewConversation<OutgoingMessageText>
+  OutgoingMessageForNewConversation<OutgoingMessageText> |
+  OutgoingMessageForNewConversation<OutgoingMessagePost>
 
 export type GIFPost = Post & {
   type: 'image'
@@ -236,4 +250,20 @@ export interface UnreadCountsResponse {
       [conversationId: string]: number
     }
   }
+}
+
+export interface UrlInfo {
+  url?: string
+  displayUrl?: string
+  title?: string
+  description?: string
+  siteName?: string
+  poster: Poster[]
+}
+
+export interface Poster {
+  type: MimeType
+  width: number
+  height: number
+  url: string
 }
