@@ -245,7 +245,7 @@ export const mapPaginatedThreads = ({
 })
 
 /**
- * Extracts the blog name and a post id from a tumblr post url.
+ * Matches the blog name and a post id from a tumblr post url.
  *
  * Handles different variations of the post urls. Like:
  * 'https://nurguly.tumblr.com/729164932829052928',
@@ -256,12 +256,14 @@ export const mapPaginatedThreads = ({
  * 'https://www.tumblr.com/nurguly/729164932829052928',
  * 'https://nu_rg-uly.tumblr.com/729164932829052928',
  * 'https://tumblr.com/nu_rg-uly/729164932829052928',
- * 'https://texts.com',
- * 'automattic',
- * '',
+ */
+const tumblrPostUrlRegex = /(?:http|https)?:\/\/(?:www\.)?(?:(?<blogNameAsSubdomain>[0-9,a-z,A-Z_-]+)\.)?tumblr\.com\/(?:(?<blogNameAsPath>[0-9,a-z,A-Z_-]+)\/)?(?<postId>\d+).*/g
+
+/**
+ * Extracts the blog name and a post id from a tumblr post url.
  */
 export const parseTumblrPostUrl = (url = ''): { blogName?: string, postId?: string } => {
-  const result = url.matchAll(/(?:http|https)?:\/\/(?:www\.)?(?:(?<blogNameAsSubdomain>[0-9,a-z,A-Z_-]+)\.)?tumblr\.com\/(?:(?<blogNameAsPath>[0-9,a-z,A-Z_-]+)\/)?(?<postId>\d+).*/g)
+  const result = url.matchAll(tumblrPostUrlRegex)
   const { blogNameAsSubdomain, blogNameAsPath, postId } = [...result][0]?.groups || {}
   return {
     blogName: blogNameAsSubdomain || blogNameAsPath,
