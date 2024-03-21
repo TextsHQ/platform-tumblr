@@ -294,8 +294,10 @@ export const mapMessageContentToOutgoingMessage = async (conversationId: string,
   const { link, includePreview } = content.links?.[0] || { includePreview: false, link: '' }
   const { blogName, postId } = parseTumblrPostUrl(link)
   if (includePreview && link && blogName && postId) {
-    const { json: urlInfo } = await network.getUrlInfo(link)
-    const { json: postBlog } = await network.getBlogInfo(blogName)
+    const [{ json: urlInfo }, { json: postBlog }] = await Promise.all([
+      network.getUrlInfo(link),
+      network.getBlogInfo(blogName),
+    ])
     if (urlInfo && postBlog) {
       const posterType = urlInfo.poster?.[0]?.type || ''
       return {
