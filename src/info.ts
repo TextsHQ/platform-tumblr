@@ -26,6 +26,7 @@ const info: PlatformInfo = {
     Attribute.SUPPORTS_REPORT_THREAD,
     Attribute.CAN_FETCH_LINK_PREVIEW,
     Attribute.CAN_REMOVE_LINK_PREVIEW,
+    Attribute.SUPPORTS_DELETE_THREAD,
   ]),
   loginMode: 'browser',
   browserLogins: [
