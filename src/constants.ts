@@ -52,7 +52,7 @@ export const API_URLS = {
   /**
    * User info url.
    */
-  USER_INFO: `${API_URL}/user/info`,
+  USER_INFO: `${API_URL}/user/info?fields[blogs]=avatar,name,title,url,description,uuid,?primary,?admin,?followers,messages,mention_key,theme`,
 
   /**
    * Conversations url.

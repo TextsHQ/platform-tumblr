@@ -63,6 +63,7 @@ const info: PlatformInfo = {
     noSupportForVideo: true,
     noSupportForAudio: true,
     noSupportForFiles: true,
+    gifMimeType: 'image/gif',
   },
 }
 

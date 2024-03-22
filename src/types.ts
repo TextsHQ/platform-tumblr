@@ -68,9 +68,10 @@ export interface Blog {
   uuid: string
   url: string
   followers: number
-  shareFollowing: boolean
+  shareFollowing?: boolean
   description?: string
   theme?: BlogTheme
+  mentionKey?: string
 }
 
 interface BlogTheme {
@@ -230,7 +231,7 @@ interface MessageImage {
 }
 
 export interface UnreadCountsResponse {
-  unreadMessages: {
+  unread_messages: {
     [key: string]: {
       [conversationId: string]: number
     }
