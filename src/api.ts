@@ -9,8 +9,8 @@ import {
 import type { Readable } from 'stream'
 
 import { TumblrClient } from './network-api'
-import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration } from './types'
-import { mapBlogToUser, mapCurrentUser, mapMessage, mapMessageContentForNewConversations, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads, mapThread } from './mappers'
+import type { AuthCredentialsWithDuration, AuthCredentialsWithExpiration, Poster } from './types'
+import { mapBlogToUser, mapCurrentUser, mapMessage, mapMessageContentForNewConversations, mapMessageContentToOutgoingMessage, mapPaginatedMessages, mapPaginatedThreads, mapThread, parseTumblrPostUrl } from './mappers'
 
 export default class TumblrPlatformAPI implements PlatformAPI {
   readonly network = new TumblrClient()
@@ -123,11 +123,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   sendMessage = async (threadID: ThreadID, content: MessageContent): Promise<boolean | Message[]> => {
     const currentUser = await this.network.getCurrentUser()
-    if (!currentUser?.activeBlog?.uuid) {
-      throw Error('User credentials are absent. Try reauthenticating.')
-    }
-
-    const body = await mapMessageContentToOutgoingMessage(threadID, currentUser.activeBlog, content)
+    const body = await mapMessageContentToOutgoingMessage(threadID, currentUser.activeBlog, content, this.network)
     const response = await this.network.sendMessage(body)
     return response.json.messages.data.map(message => mapMessage(message, currentUser.activeBlog))
   }
@@ -161,7 +157,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   createThread = async (userIDs: UserID[], title?: string, messageText?: string): Promise<boolean | Thread> => {
     const currentUser = await this.network.getCurrentUser()
-    const body = await mapMessageContentForNewConversations([currentUser.activeBlog.uuid, ...userIDs], { text: messageText })
+    const body = await mapMessageContentForNewConversations([currentUser.activeBlog.uuid, ...userIDs], { text: messageText }, this.network)
     const response = await this.network.createConversation(body)
     return mapThread(response.json, currentUser)
   }
@@ -194,7 +190,30 @@ export default class TumblrPlatformAPI implements PlatformAPI {
 
   removeReaction?: (threadID: ThreadID, messageID: MessageID, reactionKey: string) => Awaitable<void>
 
-  getLinkPreview?: (link: string) => Awaitable<MessageLink | undefined>
+  getLinkPreview = async (link: string): Promise<MessageLink | undefined> => {
+    const { blogName, postId } = parseTumblrPostUrl(link)
+    // We only support a link preview for tumblr post pages.
+    if (!blogName || !postId) {
+      return
+    }
+
+    const { json: urlInfo } = await this.network.getUrlInfo(link)
+    if (!urlInfo) {
+      return
+    }
+
+    const poster = urlInfo.poster?.[0] || {} as Poster
+    return {
+      url: urlInfo.displayUrl || urlInfo.url,
+      img: poster.url,
+      imgSize: {
+        width: poster.width || 192,
+        height: poster.height || 192,
+      },
+      title: urlInfo.title,
+      summary: urlInfo.description,
+    }
+  }
 
   addParticipant?: (threadID: ThreadID, participantID: UserID) => Awaitable<void>
 

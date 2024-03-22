@@ -83,6 +83,11 @@ export const API_URLS = {
    * Marks the conversation as read
    */
   MARK_AS_READ: `${API_URL}/conversations/mark_as_read`,
+
+  /**
+   * Extracts url info for preview
+   */
+  URL_INFO: `${API_URL}/url_info`,
 }
 
 /**

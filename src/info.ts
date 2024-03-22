@@ -24,6 +24,8 @@ const info: PlatformInfo = {
     Attribute.SUBSCRIBE_TO_THREAD_SELECTION,
     Attribute.SINGLE_THREAD_CREATION_REQUIRES_MESSAGE,
     Attribute.SUPPORTS_REPORT_THREAD,
+    Attribute.CAN_FETCH_LINK_PREVIEW,
+    Attribute.CAN_REMOVE_LINK_PREVIEW,
   ]),
   loginMode: 'browser',
   browserLogins: [
