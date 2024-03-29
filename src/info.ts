@@ -5,12 +5,16 @@ const info: PlatformInfo = {
   version: '0.0.1',
   tags: ['Beta'],
   displayName: 'Tumblr',
-  icon: `<svg fill="none" height="128" viewBox="0 0 128 128" width="128" xmlns="http://www.w3.org/2000/svg">
-  <g clip-rule="evenodd" fill-rule="evenodd">
-    <rect x="0" y="0" width="128" height="128" fill="#001935" rx="30" ry="30"></rect>
-    <path d="m69.0573 78.3786c0 5.7711 2.9121 7.771 7.5453 7.771h6.5745v14.6684h-12.4476c-11.2159 0-19.5687-5.771-19.5687-19.5824v-22.1047h-10.1799v-11.9748c11.2077-2.9141 15.898-12.5624 16.4364-20.9292h11.64v18.9865h13.5815v13.9175h-13.5815z" fill="#fff"/>
-  </g>
-</svg>`,
+  icon: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="none" viewBox="0 0 16 16">
+  <rect width="16" height="16" fill="#001935" rx="5"/>
+  <path fill="#fff" fill-rule="evenodd" d="M8.632 9.797c0 .722.364.972.943.972h.822v1.833H8.841c-1.402 0-2.446-.721-2.446-2.448V7.391H5.123V5.894c1.4-.364 1.987-1.57 2.054-2.616h1.455v2.374h1.698v1.74H8.632v2.405Z" clip-rule="evenodd"/>
+  </svg>`,
+  brand: {
+    background: '#001935',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="none" viewBox="0 0 48 48">
+    <path fill="black" fill-rule="evenodd" d="M25.896 29.392c0 2.164 1.092 2.914 2.83 2.914h2.465v5.5h-4.668c-4.206 0-7.338-2.163-7.338-7.343v-8.289h-3.817v-4.49c4.203-1.093 5.961-4.712 6.163-7.849h4.365v7.12h5.093v5.219h-5.093v7.218Z" clip-rule="evenodd"/>
+    </svg>`,
+  },
   deletionMode: MessageDeletionMode.UNSUPPORTED,
   attributes: new Set([
     Attribute.CANNOT_MESSAGE_SELF,
