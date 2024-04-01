@@ -59,7 +59,7 @@ export default class TumblrPlatformAPI implements PlatformAPI {
     if (!jsCodeResult) {
       return {
         type: 'error',
-        errorMessage: "We couldn't find your account.",
+        errorMessage: "We couldn't access your account.",
       }
     }
 

@@ -90,7 +90,10 @@ export class TumblrClient {
    */
   private ensureUpdatedCreds = async () => {
     if (!this.authCreds) {
-      throw new Error('Tumblr not logged in')
+      this.eventCallback([{
+        type: ServerEventType.REFRESH_ACCOUNT,
+      }])
+      return
     }
 
     if (this.authCreds.expires_at > Date.now()) {
@@ -147,6 +150,13 @@ export class TumblrClient {
         ...(opts.headers || {}),
       },
     })
+
+    if (response.statusCode === 401) {
+      this.eventCallback([{
+        type: ServerEventType.REFRESH_ACCOUNT,
+      }])
+    }
+
     return {
       ...response,
       json: JSON.parse(response.body),
@@ -347,6 +357,7 @@ export class TumblrClient {
     if (this.unreadCountsPollingTimoutId) {
       clearTimeout(this.unreadCountsPollingTimoutId)
     }
+    this.authCreds = null
   }
 
   disposeConversationsChannel = () => {
