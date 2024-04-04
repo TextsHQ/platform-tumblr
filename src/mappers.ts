@@ -221,7 +221,6 @@ export const mapThread = (conversation: Conversation, currentUser: TumblrUserInf
     lastReadMessageID,
     /** If true, messages cannot be sent in the thread */
     isReadOnly: !conversation.canSend,
-    isArchived: conversation.status === 'INACTIVE',
     type: 'single',
     /** If null, thread won't be visible to the user in the UI unless they explicitly search for it  */
     timestamp: new Date(conversation.lastModifiedTs),
