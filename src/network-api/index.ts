@@ -3,6 +3,7 @@ import {
   FetchOptions,
   OnServerEventCallback,
   PaginationArg,
+  ReAuthError,
   ServerEvent,
   ServerEventType,
   texts,
@@ -90,10 +91,7 @@ export class TumblrClient {
    */
   private ensureUpdatedCreds = async () => {
     if (!this.authCreds) {
-      this.eventCallback([{
-        type: ServerEventType.REFRESH_ACCOUNT,
-      }])
-      return
+      throw new ReAuthError()
     }
 
     if (this.authCreds.expires_at > Date.now()) {
@@ -152,9 +150,7 @@ export class TumblrClient {
     })
 
     if (response.statusCode === 401) {
-      this.eventCallback([{
-        type: ServerEventType.REFRESH_ACCOUNT,
-      }])
+      throw new ReAuthError()
     }
 
     return {
