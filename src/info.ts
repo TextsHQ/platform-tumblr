@@ -37,6 +37,10 @@ const info: PlatformInfo = {
     {
       url: 'https://texts.com/api/tumblr/auth/start',
       runJSOnClose: 'window.tumblrLoginResult',
+      // When user denies the OAuth access to Texts.com the auth flow simply
+      // redirects to tumblr.com. We close if we detect that redirect.
+      // eslint-disable-next-line no-useless-escape
+      closeOnRedirectRegex: '^http(s):\/\/(www\.)tumblr\.com(\/)$',
       runJSOnNavigate: `
       try {
         const iframe = document.createElement('iframe')

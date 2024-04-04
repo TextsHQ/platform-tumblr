@@ -3,6 +3,7 @@ import {
   FetchOptions,
   OnServerEventCallback,
   PaginationArg,
+  ReAuthError,
   ServerEvent,
   ServerEventType,
   texts,
@@ -90,7 +91,7 @@ export class TumblrClient {
    */
   private ensureUpdatedCreds = async () => {
     if (!this.authCreds) {
-      throw new Error('Tumblr not logged in')
+      throw new ReAuthError()
     }
 
     if (this.authCreds.expires_at > Date.now()) {
@@ -147,6 +148,11 @@ export class TumblrClient {
         ...(opts.headers || {}),
       },
     })
+
+    if (response.statusCode === 401) {
+      throw new ReAuthError()
+    }
+
     return {
       ...response,
       json: JSON.parse(response.body),
@@ -347,6 +353,7 @@ export class TumblrClient {
     if (this.unreadCountsPollingTimoutId) {
       clearTimeout(this.unreadCountsPollingTimoutId)
     }
+    this.authCreds = null
   }
 
   disposeConversationsChannel = () => {
